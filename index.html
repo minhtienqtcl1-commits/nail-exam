@@ -105,7 +105,7 @@ function pickRound(n,weakOnly){const used=new Set();const out=[];const add=a=>{f
  const pri=i=>(S.box[i]||0)*10-(S.err[i]||0)*3;
  if(weakOnly){const w=S.intro.filter(i=>(S.err[i]||0)>0).sort((a,b)=>(isWeak(b)-isWeak(a))||((S.err[b]||0)-(S.err[a]||0))||((S.box[a]||0)-(S.box[b]||0)));add(shuf(w.slice(0,n*2)).sort((a,b)=>pri(a)-pri(b)));return shuf(out).map(i=>byId[i])}
  const due=learning.filter(i=>(S.due[i]||0)<=S.step).sort((a,b)=>pri(a)-pri(b));
- add(due.slice(0,Math.max(n-Math.min(NEWPER,n>>1),Math.ceil(n/2))));
+ add(due.slice(0,S.planOn?Math.max(n-Math.min(NEWPER,Math.ceil(n*.7)),Math.ceil(n*.3)):Math.max(n-Math.min(NEWPER,n>>1),Math.ceil(n/2))));
  add(D.filter(x=>!S.intro.includes(x.id)).slice(0,n-out.length>NEWPER?NEWPER:n-out.length).map(x=>x.id));
  add(due);
  add(learning.slice().sort((a,b)=>(S.due[a]||0)-(S.due[b]||0)));
@@ -135,17 +135,17 @@ function menu(){clearAll();S.planOn=false;NEWPER=6;const s=stats();app.innerHTML
 document.getElementById('home').onclick=menu;
 // END OF ROUND
 let curMode=null;
-function endRound(m,c,n,wrong,extra){clearAll();S.rounds++;S.hist.push({m,c,n,t:Date.now()});if(S.hist.length>60)S.hist=S.hist.slice(-60);onRound(m,c,n);if(m==='daily'&&S.dailyDone!==dayKey()){S.dailyDone=dayKey();addXP(150);award('daily')}save();
+function endRound(m,c,n,wrong,extra){clearAll();S.rounds++;S.hist.push({m,c,n,t:Date.now()});if(S.hist.length>60)S.hist=S.hist.slice(-60);onRound(m,c,n);planRoundEnd();if(m==='daily'&&S.dailyDone!==dayKey()){S.dailyDone=dayKey();addXP(150);award('daily')}save();
  const pct=n?Math.round(c/n*100):0;const s=stats();
  const others=GAMES.filter(g=>g!==m);const nextMix=others[Math.random()*others.length|0];const pn=planNext(m);
  app.innerHTML=`<div class="card res pop"><div class="big">${pct>=80?'🏆':pct>=50?'👍':'💪'} ${c}/${n}</div><div>${esc(MODES[m][1])} – đúng ${pct}%${extra?' · '+esc(extra):''}</div><br>
  <div class="stats"><div><b>${s.m}</b>Đã thuộc</div><div><b>${s.l}</b>Đang học</div><div><b>${s.w}</b>Hay sai</div><div><b>${s.n}</b>Chưa học</div></div>
  ${wrong.length?`<br><div class="wl"><b>Câu trả lời sai (sẽ được hỏi lại sớm):</b>${wrong.map(x=>`<div>❓ ${P(x.question)}<br>✅ ${hl(x.answer)}</div>`).join('')}</div>`:''}<br>
- <div class="col"><button id="again" style="background:var(--ac)">${S.planOn?(planToday()&&!planToday().td.done?'🎯 Còn '+(planToday().td.quota-planToday().td.a)+' câu – ván tiếp: '+esc(MODES[pn][1]):'🎉 Đã đạt mục tiêu! Học thêm: '+esc(MODES[pn][1])):S.mix?'🔀 Ván tiếp: '+esc(MODES[nextMix][1]):'🔁 Chơi tiếp chế độ này'}</button>
+ <div class="col"><button id="again" style="background:var(--ac)">${S.planOn?(planToday()&&!planToday().td.done?'🎯 Còn '+planToday().left+' câu ('+planToday().newLeft+' mới) – ván '+((planToday().td.r||0)+1)+'/~'+planRounds(planToday())+' – ván tiếp: '+esc(MODES[pn][1]):'🎉 Đã đạt mục tiêu! Học thêm: '+esc(MODES[pn][1])):S.mix?'🔀 Ván tiếp: '+esc(MODES[nextMix][1]):'🔁 Chơi tiếp chế độ này'}</button>
  <button id="other">🎮 Chuyển sang game khác</button><div id="pickm"></div>
  <button id="mix" class="${S.mix?'on':''}">🔀 Trộn chế độ mỗi ván: ${S.mix?'BẬT':'TẮT'}</button>
  <button id="tomenu">🏠 Về menu</button></div></div>`;
- document.getElementById('again').onclick=()=>start(S.planOn?pn:S.mix?nextMix:m);
+ document.getElementById('again').onclick=()=>start(S.planOn?pn:S.mix?nextMix:m);planAuto();
  document.getElementById('tomenu').onclick=menu;
  document.getElementById('mix').onclick=()=>{S.mix=!S.mix;save();endRoundRedraw()};
  function endRoundRedraw(){S.rounds--;S.hist.pop();endRound(m,c,n,wrong,extra)}
@@ -335,27 +335,48 @@ function badgesM(){clearAll();const l=lvOf(S.xp);app.innerHTML=`<div class="card
 // ===== MỤC TIÊU 14 NGÀY =====
 const PLAN_DAYS=14;
 const dIdx=(a,b)=>Math.round((new Date(b+'T12:00')-new Date(a+'T12:00'))/864e5);
+const PLAN_V=2;
+function planCalc(d,nw0){const left=Math.max(1,PLAN_DAYS-d);const notNew=D.length-S.intro.length+(nw0||0);const notM=D.filter(x=>!mastered(x.id)).length;
+ const newQ=Math.min(notNew,Math.max(Math.ceil(D.length/PLAN_DAYS)*(notNew>0?1:0),Math.ceil(notNew/left)));
+ const dueN=S.intro.filter(i=>!mastered(i)&&(S.due[i]||0)<=S.step+60).length;
+ const rev=Math.max(Math.ceil(newQ*.6),Math.ceil(dueN*.6),Math.ceil((notM-notNew)*5/left*.6));
+ return{newQ,revQ:rev,quota:Math.max(30,Math.min(400,newQ+rev))}}
 function planToday(){const P=S.plan;if(!P)return null;const t=dayKey();const d=dIdx(P.start,t);let td=P.days[t];
- if(!td){const left=Math.max(1,PLAN_DAYS-d);const notNew=D.length-S.intro.length;const notM=D.filter(x=>!mastered(x.id)).length;
-  const newQ=Math.ceil(notNew/left);const dueN=S.intro.filter(i=>!mastered(i)&&(S.due[i]||0)<=S.step+60).length;
-  const quota=Math.max(30,Math.min(400,newQ+Math.ceil(Math.max(dueN,(notM-notNew)*5/left)*.6)));
-  td=P.days[t]={quota,a:0,nw:0,newQ,done:false};}
- const exp=Math.min(D.length,Math.round(D.length*Math.min(d+1,PLAN_DAYS)/PLAN_DAYS));return{t,d,td,exp,behind:exp-S.intro.length}}
-function planCount(nw){const p=planToday();if(!p)return;p.td.a++;if(nw)p.td.nw++;
- if(!p.td.done&&p.td.a>=p.td.quota){p.td.done=true;S.plan.lastDone=p.t;const y=dayKey(new Date(Date.parse(p.t+'T12:00')-864e5));S.plan.streak=S.plan.prev===y?(S.plan.streak||0)+1:1;S.plan.prev=p.t;S.plan.best=Math.max(S.plan.best||0,S.plan.streak);
+ if(!td||td.v!==PLAN_V){const o=td||{};const c=planCalc(d,o.nw);
+  // migration: old plans (no v) had quota counting only answers; recompute, keeping today's progress
+  td=P.days[t]={v:PLAN_V,quota:c.quota,newQ:c.newQ,a:o.a||0,nw:o.nw||0,r:o.r||0,done:false};
+  td.done=td.a>=td.quota&&td.nw>=Math.min(td.newQ,td.nw+D.length-S.intro.length);setTimeout(save,0)}
+ const exp=Math.min(D.length,Math.round(D.length*Math.min(d+1,PLAN_DAYS)/PLAN_DAYS));
+ const newLeft=Math.max(0,Math.min(td.newQ-td.nw,D.length-S.intro.length));
+ const left=Math.max(td.quota-td.a,newLeft);
+ return{t,d,td,exp,behind:exp-S.intro.length,newLeft,left,revLeft:Math.max(0,left-newLeft)}}
+function planAvgRound(){const h=(S.hist||[]).slice(-10).filter(x=>x.n>0);return h.length?Math.max(6,Math.round(h.reduce((a,b)=>a+b.n,0)/h.length)):10}
+function planRounds(p){return (p.td.r||0)+Math.ceil(p.left/planAvgRound())}
+function planNewPer(){const p=planToday();if(!p||p.td.done)return 6;return Math.max(6,Math.min(20,Math.ceil(p.newLeft/Math.max(1,Math.ceil(p.left/planAvgRound())))+1))}
+function planCount(nw){const p=planToday();if(!p)return;p.td.a++;if(nw)p.td.nw++;const q=planToday();
+ if(!p.td.done&&q.left<=0){p.td.done=true;S.plan.lastDone=p.t;const y=dayKey(new Date(Date.parse(p.t+'T12:00')-864e5));S.plan.streak=S.plan.prev===y?(S.plan.streak||0)+1:1;S.plan.prev=p.t;S.plan.best=Math.max(S.plan.best||0,S.plan.streak);
   addXP(300);setTimeout(()=>{confetti();setTimeout(confetti,600);toast('🎯 Hoàn thành mục tiêu hôm nay! +300 XP');vib([80,50,80,50,150])},50)}}
+function planRoundEnd(){if(!S.planOn)return;const p=planToday();if(p){p.td.r=(p.td.r||0)+1;NEWPER=planNewPer()}}
 function planStreak(){const P=S.plan;if(!P||!P.prev)return 0;const t=dayKey(),y=dayKey(new Date(Date.parse(t+'T12:00')-864e5));return P.prev===t||P.prev===y?P.streak:0}
 function planNext(last){const g=GAMES.filter(x=>x!==last);return g[Math.random()*g.length|0]}
 function planCard(){const p=planToday();if(!p)return `<div class="card plan"><b>🎯 Mục tiêu 14 ngày: thuộc hết ${D.length} câu</b><p class="small">Mỗi ngày game tự tính số câu tối thiểu (câu mới + câu đến hạn ôn), tự điều chỉnh nếu bạn chậm/nhanh, và trộn ngẫu nhiên tất cả trò chơi.</p><button id="pstart" style="width:100%;background:var(--ac);font-size:1.15rem">🚀 Bắt đầu kế hoạch 14 ngày</button></div>`;
- const left=Math.max(0,p.td.quota-p.td.a);const P=S.plan;
+ const left=p.left;const P=S.plan;
  const cal=Array.from({length:PLAN_DAYS},(_,k)=>{const dk=dayKey(new Date(Date.parse(P.start+'T12:00')+k*864e5));const r=P.days[dk];const cls=r&&r.done?'cd':dk===p.t?'ct':dk<p.t?'cm':'';return `<div class="cday ${cls}"><small>${k+1}</small>${r&&r.done?'🔥':dk===p.t?'⏳':dk<p.t?'✖':'·'}</div>`}).join('');
  const st=p.d>=PLAN_DAYS?'🏁 Đã hết 14 ngày':p.behind>0?`🐢 Chậm ${p.behind} câu`:`✅ Đúng tiến độ${p.behind<0?' (vượt '+(-p.behind)+')':''}`;
  return `<div class="card plan pop"><div class="top"><b>🎯 Ngày ${Math.min(p.d+1,PLAN_DAYS)}/${PLAN_DAYS}</b><span class="pill">🔥 ${planStreak()} ngày liên tiếp</span></div>
- <div class="pbig">${p.td.done?'🎉 Hôm nay đã xong!':'Hôm nay: còn '+left+' câu'}</div><div class="bar"><i style="width:${Math.min(100,p.td.a/p.td.quota*100)}%"></i></div>
- <p class="small">${p.td.a}/${p.td.quota} câu hôm nay (≈${p.td.newQ} câu mới) · Đã học ${S.intro.length}/${D.length}, mục tiêu tới hôm nay ${p.exp} · <b>${st}</b></p>
+ <div class="pbig">${p.td.done?'🎉 Hôm nay đã xong!':'Hôm nay: còn '+left+' câu ('+p.newLeft+' câu mới + '+p.revLeft+' ôn)'}</div><div class="bar"><i style="width:${Math.min(100,p.td.a/(p.td.a+left||1)*100)}%"></i></div>
+ <p class="small" id="pround">${p.td.done?'Đã chơi '+(p.td.r||0)+' ván':'Ván '+((p.td.r||0)+1)+' / ~'+planRounds(p)+' (mỗi ván ~'+planAvgRound()+' câu, các ván nối tiếp tự động)'}</p>
+ <p class="small">${p.td.a}/${p.td.a+left} câu hôm nay · mới ${p.td.nw}/${p.td.newQ} · Đã học ${S.intro.length}/${D.length}, mục tiêu tới hôm nay ${p.exp} · <b>${st}</b></p>
  <div class="cal">${cal}</div><button id="pgo" style="width:100%;background:var(--ac);font-size:1.15rem">${p.td.done?'➕ Học thêm (trộn game)':'▶️ Học hôm nay (trộn game)'}</button></div>`}
 function planBind(){const s=document.getElementById('pstart');if(s)s.onclick=()=>{S.plan={start:dayKey(),days:{},streak:0};save();menu()};
- const g=document.getElementById('pgo');if(g)g.onclick=()=>{S.planOn=true;S.mix=false;const pt=planToday();NEWPER=pt&&pt.behind>0?8:6;save();start(planNext())}}
+ const g=document.getElementById('pgo');if(g)g.onclick=()=>{S.planOn=true;S.mix=false;const pt=planToday();NEWPER=planNewPer();save();start(planNext())}}
+
+function planAuto(){if(!S.planOn)return;const p=planToday();const b=document.getElementById('again');if(!p||p.td.done||!b)return;
+ let k=5;const lab=b.textContent;const box=document.createElement('div');box.className='small';box.id='pcd';b.after(box);
+ const tick=()=>{box.innerHTML=`⏩ Ván ${(p.td.r||0)+1} / ~${planRounds(p)} tự bắt đầu sau <b>${k}</b>s · <a href="#" id="pstop">dừng</a>`;
+  const st=document.getElementById('pstop');if(st)st.onclick=e=>{e.preventDefault();clearInterval(iv);box.textContent='⏸ Đã dừng tự chạy'}};
+ tick();const iv=setInterval(()=>{k--;if(k<=0){clearInterval(iv);b.click()}else tick()},1000);timers.push(iv);
+ document.querySelectorAll('#app button').forEach(x=>{if(x!==b)x.addEventListener('click',()=>clearInterval(iv),{capture:true})})}
 
 save();menu();
 </script></body></html>
