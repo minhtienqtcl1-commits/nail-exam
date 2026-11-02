@@ -358,8 +358,8 @@ function planCount(nw){const p=planToday();if(!p)return;p.td.a++;if(nw)p.td.nw++
   addXP(300);setTimeout(()=>{confetti();setTimeout(confetti,600);toast('🎯 Hoàn thành mục tiêu hôm nay! +300 XP');vib([80,50,80,50,150])},50)}}
 function planRoundEnd(){if(!S.planOn)return;const p=planToday();if(p){p.td.r=(p.td.r||0)+1;NEWPER=planNewPer()}}
 function planStreak(){const P=S.plan;if(!P||!P.prev)return 0;const t=dayKey(),y=dayKey(new Date(Date.parse(t+'T12:00')-864e5));return P.prev===t||P.prev===y?P.streak:0}
-function planNext(last){const g=GAMES.filter(x=>x!==last);return g[Math.random()*g.length|0]}
-function planCard(){const p=planToday();if(!p)return `<div class="card plan"><b>🎯 Mục tiêu 14 ngày: thuộc hết ${D.length} câu</b><p class="small">Mỗi ngày game tự tính số câu tối thiểu (câu mới + câu đến hạn ôn), tự điều chỉnh nếu bạn chậm/nhanh, và trộn ngẫu nhiên tất cả trò chơi.</p><button id="pstart" style="width:100%;background:var(--ac);font-size:1.15rem">🚀 Bắt đầu kế hoạch 14 ngày</button></div>`;
+const PLAN_GAMES=['quiz','match'];function planNext(last){const g=PLAN_GAMES.filter(x=>x!==last);return g[Math.random()*g.length|0]}
+function planCard(){const p=planToday();if(!p)return `<div class="card plan"><b>🎯 Mục tiêu 14 ngày: thuộc hết ${D.length} câu</b><p class="small">Mỗi ngày game tự tính số câu tối thiểu (câu mới + câu đến hạn ôn), tự điều chỉnh nếu bạn chậm/nhanh, và xen kẽ 2 trò: trắc nghiệm tính giờ ⏱️ và ghép cặp 🧩.</p><button id="pstart" style="width:100%;background:var(--ac);font-size:1.15rem">🚀 Bắt đầu kế hoạch 14 ngày</button></div>`;
  const left=p.left;const P=S.plan;
  const cal=Array.from({length:PLAN_DAYS},(_,k)=>{const dk=dayKey(new Date(Date.parse(P.start+'T12:00')+k*864e5));const r=P.days[dk];const cls=r&&r.done?'cd':dk===p.t?'ct':dk<p.t?'cm':'';return `<div class="cday ${cls}"><small>${k+1}</small>${r&&r.done?'🔥':dk===p.t?'⏳':dk<p.t?'✖':'·'}</div>`}).join('');
  const st=p.d>=PLAN_DAYS?'🏁 Đã hết 14 ngày':p.behind>0?`🐢 Chậm ${p.behind} câu`:`✅ Đúng tiến độ${p.behind<0?' (vượt '+(-p.behind)+')':''}`;
@@ -367,7 +367,7 @@ function planCard(){const p=planToday();if(!p)return `<div class="card plan"><b>
  <div class="pbig">${p.td.done?'🎉 Hôm nay đã xong!':'Hôm nay: còn '+left+' câu ('+p.newLeft+' câu mới + '+p.revLeft+' ôn)'}</div><div class="bar"><i style="width:${Math.min(100,p.td.a/(p.td.a+left||1)*100)}%"></i></div>
  <p class="small" id="pround">${p.td.done?'Đã chơi '+(p.td.r||0)+' ván':'Ván '+((p.td.r||0)+1)+' / ~'+planRounds(p)+' (mỗi ván ~'+planAvgRound()+' câu, các ván nối tiếp tự động)'}</p>
  <p class="small">${p.td.a}/${p.td.a+left} câu hôm nay · mới ${p.td.nw}/${p.td.newQ} · Đã học ${S.intro.length}/${D.length}, mục tiêu tới hôm nay ${p.exp} · <b>${st}</b></p>
- <div class="cal">${cal}</div><button id="pgo" style="width:100%;background:var(--ac);font-size:1.15rem">${p.td.done?'➕ Học thêm (trộn game)':'▶️ Học hôm nay (trộn game)'}</button></div>`}
+ <div class="cal">${cal}</div><button id="pgo" style="width:100%;background:var(--ac);font-size:1.15rem">${p.td.done?'➕ Học thêm (trắc nghiệm + ghép cặp)':'▶️ Học hôm nay (trắc nghiệm + ghép cặp)'}</button></div>`}
 function planBind(){const s=document.getElementById('pstart');if(s)s.onclick=()=>{S.plan={start:dayKey(),days:{},streak:0};save();menu()};
  const g=document.getElementById('pgo');if(g)g.onclick=()=>{S.planOn=true;S.mix=false;const pt=planToday();NEWPER=planNewPer();save();start(planNext())}}
 
