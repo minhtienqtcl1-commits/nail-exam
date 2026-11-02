@@ -77,6 +77,9 @@ body.neon .card,body.neon button{box-shadow:0 0 0 1px #ff2bd655,0 0 18px #7c4dff
 .dq[hidden]{display:none}.dq b{font-size:1.05rem}.dqt{overflow-wrap:anywhere}
 .dqb{height:8px;margin-top:6px;background:#0004;border-radius:5px;overflow:hidden}.dqb i{display:block;height:100%;background:linear-gradient(90deg,#ffd84d,#3ddc97);transition:width .4s}
 body.neon .dq{background:linear-gradient(135deg,#ff2bd6dd,#3a0ca3dd)}
+
+.match button.bad{background:var(--bad);opacity:1}.match button:disabled{cursor:default}.match .done{animation:okf .4s}
+@keyframes okf{from{background:var(--ok);color:#002;opacity:1}}
 </style></head><body>
 <header><div class="top"><h1>💅 Ôn thi Nail Virginia</h1><button id="home" class="pill" style="min-height:40px">🏠 Menu</button></div>
 <div class="bar"><i id="pbar"></i></div><div class="small" id="ptxt"></div><div class="gbar" id="gbar"></div></header>
@@ -165,7 +168,7 @@ function mcq(mode,xs,timed){let i=0,c=0,streak=0;const wrong=[];next();
   bs.forEach(b=>b.onclick=()=>ans(b));
   function ans(b){clearAll();const ok=!!b&&b.dataset.ok==='true';bs.forEach(z=>{z.disabled=true;if(z.dataset.ok==='true')z.classList.add('ok')});if(b&&!ok)b.classList.add('bad');
    beep(ok);grade(x.id,ok);if(ok){c++;streak++;S.streakBest=Math.max(S.streakBest,streak);save()}else{streak=0;wrong.push(x)}
-   document.getElementById('ex').innerHTML=explain(x)+`<br><button id="nx" style="width:100%">${i+1<xs.length?'Câu tiếp ➜':'Xem kết quả ➜'}</button>`;document.getElementById('nx').onclick=()=>{i++;next()}}}}
+   if(ok&&mode==='quiz'){timers.push(setTimeout(()=>{i++;next()},400));return}document.getElementById('ex').innerHTML=explain(x)+`<br><button id="nx" style="width:100%">${i+1<xs.length?'Câu tiếp ➜':'Xem kết quả ➜'}</button>`;document.getElementById('nx').onclick=()=>{i++;next()}}}}
 function quiz(){curMode='quiz';mcq('quiz',pickRound(10),true)}
 function weak(){curMode='weak';const xs=pickRound(10,true);if(!xs.length){app.innerHTML=`<div class="card">🎉 Chưa có câu nào hay sai. Hãy chơi các chế độ khác trước!<br><br><button id="tomenu" style="width:100%">🏠 Về menu</button></div>`;document.getElementById('tomenu').onclick=menu;return}mcq('weak',xs,false)}
 // MATCH (2 boards x 5)
@@ -175,8 +178,8 @@ function match(){clearAll();const all=pickRound(10);let board=0,c=0;const wrongA
   app.innerHTML=`<div class="card"><div class="top"><b>Ghép câu hỏi với đáp án (${board+1}/${Math.ceil(all.length/5)})</b><span class="pill" id="me">Sai: 0</span></div><br><div class="match">${L.map((l,i)=>`<button data-id="${l.id}" data-s="q">${l.h}</button><button data-id="${R[i].id}" data-s="a">${R[i].h}</button>`).join('')}</div><div id="ex"></div></div>`;
   app.querySelectorAll('.match button').forEach(b=>b.onclick=()=>{if(!sel||sel.dataset.s===b.dataset.s){sel&&sel.classList.remove('sel');sel=b;b.classList.add('sel');return}
    if(sel.dataset.id===b.dataset.id){beep(true);sel.classList.add('done');b.classList.add('done');const ok=!wrong.has(b.dataset.id);grade(b.dataset.id,ok);if(ok)c++;else wrongAll.push(byId[b.dataset.id]);left--;
-    if(!left){board++;document.getElementById('ex').innerHTML=`<br>${xs.map(x=>`<div class="expl">${P(x.question)}<br>✅ ${hl(x.answer)}</div>`).join('')}<br><button id="nx" style="width:100%">${board*5<all.length?'Bảng tiếp ➜':'Xem kết quả ➜'}</button>`;document.getElementById('nx').onclick=play}}
-   else{beep(false);err++;wrong.add(sel.dataset.s==='q'?sel.dataset.id:b.dataset.id);b.classList.add('shake');document.getElementById('me').textContent='Sai: '+err}
+    if(!left){board++;timers.push(setTimeout(play,400))}}
+   else{beep(false);err++;const qb=sel.dataset.s==='q'?sel:b,ab=qb===sel?b:sel;wrong.add(qb.dataset.id);b.classList.add('shake');document.getElementById('me').textContent='Sai: '+err;mWrong(qb,ab)}
    sel.classList.remove('sel');sel=null})}}
 // MILLIONAIRE
 const PR=['200K','400K','600K','1TR','2TR','3TR','6TR','10TR','14TR','22TR','30TR','40TR','80TR','150TR','250TR'];
@@ -390,6 +393,13 @@ function dqUpd(){const el=document.getElementById('dq');if(!el)return;const p=dq
  const tot=p.td.a+p.left,pct=tot?Math.min(100,Math.round(p.td.a/tot*100)):100;
  const txt=p.td.done?`🎉 Hôm nay: đã đạt mục tiêu! (${p.td.a} câu) · học thêm càng tốt`:`🎯 Hôm nay: còn <b id="dqn">${p.left}</b> câu (${p.newLeft} mới + ${p.revLeft} ôn)`+(S.planOn?` · Ván ${(p.td.r||0)+1}/~${Math.max((p.td.r||0)+1,planRounds(p))}`:' · tính vào mục tiêu');
  el.innerHTML=`<div class="dqt">${txt}</div><div class="dqb"><i style="width:${pct}%"></i></div>`;el.hidden=false}
+
+// MATCH: wrong pair -> lock board, show correct pairings + explanation, wait for "Câu tiếp"
+function mWrong(qb,ab){const bs=[...document.querySelectorAll('.match button')];const prev=bs.map(z=>z.disabled);bs.forEach(z=>z.disabled=true);qb.classList.add('bad');ab.classList.add('bad');
+ const xq=byId[qb.dataset.id],xa=byId[ab.dataset.id];const ex=document.getElementById('ex');
+ ex.innerHTML=`<div class="expl mwr">❌ <b>Chưa đúng cặp.</b><br>❓ ${P(xq.question)}</div>${explain(xq)}${xa&&xa!==xq?`<div class="expl">🔁 “${P(xa.answer)}” là đáp án của câu: ${P(xa.question)}</div>`:''}<br><button id="nx" style="width:100%">Câu tiếp ➜</button>`;
+ const nx=document.getElementById('nx');nx.onclick=()=>{ex.innerHTML='';bs.forEach((z,k)=>{z.disabled=prev[k];z.classList.remove('bad','shake')})};
+ try{nx.scrollIntoView({block:'nearest',behavior:'smooth'})}catch(e){}}
 
 save();menu();
 </script></body></html>
