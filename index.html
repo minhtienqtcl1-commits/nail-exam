@@ -81,6 +81,19 @@ body.neon .dq{background:linear-gradient(135deg,#ff2bd6dd,#3a0ca3dd)}
 .match button.bad{background:var(--bad);opacity:1}.match button:disabled{cursor:default}.match .done{animation:okf .4s}
 @keyframes okf{from{background:var(--ok);color:#002;opacity:1}}
 .expl,.expl *{overflow-wrap:anywhere;word-break:break-word}
+
+/* ===== THI THỬ GIỐNG THI THẬT ===== */
+.qgrid{display:grid;grid-template-columns:repeat(10,1fr);gap:6px;margin:10px 0}
+.qgrid button{min-height:40px;padding:6px 2px;font-size:.85rem;background:#3b2c6b}
+.qgrid button.done{background:var(--ok);color:#002}
+.qgrid button.flag{outline:3px solid var(--kw)}
+.qgrid button.cur{outline:3px solid #fff}
+.opts button.sel{background:var(--kw);color:#000}
+#mt.warn{background:var(--bad)}
+.mkbar{position:sticky;top:0;z-index:20;background:var(--card);border-radius:0 0 14px 14px;padding:8px 10px;margin:0 0 8px;box-shadow:0 4px 14px #0006}
+.rev{border-top:1px solid #fff2;padding:12px 0}
+.rev.wrong{background:#ff5c5c14;border-radius:10px;padding:12px;margin:8px 0}
+.rev .mine{font-weight:700}
 </style></head><body>
 <header><div class="top"><h1>💅 Ôn thi Nail Virginia</h1><button id="home" class="pill" style="min-height:40px">🏠 Menu</button></div>
 <div class="bar"><i id="pbar"></i></div><div class="small" id="ptxt"></div><div class="gbar" id="gbar"></div></header>
@@ -92,7 +105,7 @@ const KEY='nailVA_v1';const MAXBOX=4;let NEWPER=6;const IV=[1,3,8,20,50,120];
 const byId=Object.fromEntries(D.map(x=>[x.id,x]));
 function migrate(o){o=o&&typeof o==='object'?o:{};
  for(const k of ['box','due','err','ok','seen'])if(!o[k]||typeof o[k]!=='object')o[k]={};
- if(!Array.isArray(o.intro))o.intro=[];if(!Array.isArray(o.hist))o.hist=[];
+ if(!Array.isArray(o.intro))o.intro=[];if(!Array.isArray(o.hist))o.hist=[];if(!Array.isArray(o.mock))o.mock=[];
  o.streakBest=o.streakBest||0;o.step=o.step||0;o.rounds=o.rounds||0;o.mix=!!o.mix;o.ver=3;o.xp=+o.xp||0;if(!Array.isArray(o.badges))o.badges=[];if(!o.played||typeof o.played!=='object')o.played={};o.dstreak=o.dstreak||0;o.dbest=o.dbest||0;o.okTotal=o.okTotal||Object.values(o.ok).reduce((a,b)=>a+b,0);
  o.intro=o.intro.filter(i=>byId[i]);return o}
 let S;try{S=migrate(JSON.parse(localStorage.getItem(KEY)||'null'))}catch(e){S=migrate(null)}
@@ -131,9 +144,9 @@ const app=document.getElementById('app');
 const card=x=>`<div class="q">${P(x.question)}</div>`;
 function explain(x){return `<div class="expl">✅ <b>Đáp án:</b> ${hl(x.answer)}${x.keywords&&x.keywords.length?`<br>🔑 Từ khóa: ${x.keywords.map(k=>`<span class="kw">${esc(k)}</span>`).join(' ')}`:''}<br>${esc(x.explanation||'')}<br><span class="small">📚 ${esc(x.source||'')} · ảnh ${esc(x.source_image)}${x.notes?' · '+esc(x.notes):''}</span></div>`}
 let timers=[];function clearAll(){timers.forEach(t=>{clearInterval(t);clearTimeout(t)});timers=[]}
-const MODES={quiz:['⏱️','Trắc nghiệm tính giờ'],match:['🧩','Ghép cặp'],mil:['💰','Ai là triệu phú'],bub:['🫧','Bong bóng rơi'],boss:['👹','Đánh Boss'],flash:['🃏','Thẻ ghi nhớ'],weak:['🎯','Câu hay sai'],swipe:['💘','Swipe Đúng/Sai'],runner:['🛼','Chạy vô tận'],wheel:['🎡','Vòng quay may mắn'],type:['⌨️','Gõ đáp án'],scr:['🔤','Ghép chữ'],daily:['📅','Thử thách hàng ngày']};
+const MODES={mock:['📝','Thi thử giống thi thật'],quiz:['⏱️','Trắc nghiệm tính giờ'],match:['🧩','Ghép cặp'],mil:['💰','Ai là triệu phú'],bub:['🫧','Bong bóng rơi'],boss:['👹','Đánh Boss'],flash:['🃏','Thẻ ghi nhớ'],weak:['🎯','Câu hay sai'],swipe:['💘','Swipe Đúng/Sai'],runner:['🛼','Chạy vô tận'],wheel:['🎡','Vòng quay may mắn'],type:['⌨️','Gõ đáp án'],scr:['🔤','Ghép chữ'],daily:['📅','Thử thách hàng ngày']};
 const GAMES=['quiz','match','mil','bub','boss','flash','swipe','runner','wheel','type','scr'];
-function start(m){dqMode(m);({quiz,match,mil,bub,boss,flash,weak,swipe,runner,wheel,type:typeM,scr:scramble,daily})[m]()}
+function start(m){dqMode(m);({mock:mockHome,quiz,match,mil,bub,boss,flash,weak,swipe,runner,wheel,type:typeM,scr:scramble,daily})[m]()}
 function menu(){clearAll();S.planOn=false;NEWPER=6;dqMode(null);const s=stats();app.innerHTML=planCard()+`<div class="card"><b>📊 Tiến độ đã lưu</b><br><br><div class="stats"><div><b>${s.m}</b>Đã thuộc</div><div><b>${s.l}</b>Đang học</div><div><b>${s.w}</b>Hay sai</div><div><b>${s.n}</b>Chưa học</div></div>
 <p class="small">Đã chơi ${S.rounds} ván${S.hist.length?` · ván gần nhất: ${MODES[S.hist[S.hist.length-1].m]?.[1]||''} ${S.hist[S.hist.length-1].c}/${S.hist[S.hist.length-1].n}`:''}. Mỗi ván ưu tiên câu đến hạn ôn & câu hay sai, rồi mới thêm câu mới.</p></div>
 <div class="grid">${Object.entries(MODES).map(([k,v])=>`<button class="mode" data-m="${k}"><b>${v[0]}</b>${v[1]}${k==='weak'?` (${s.w})`:''}</button>`).join('')}
@@ -399,6 +412,81 @@ function dqUpd(){const el=document.getElementById('dq');if(!el)return;const p=dq
 function mWrong(qb,ab){qb.classList.add('bad');ab.classList.add('bad');setTimeout(()=>{qb.classList.remove('bad','shake');ab.classList.remove('bad','shake')},900);
  const xq=byId[qb.dataset.id],xa=byId[ab.dataset.id];const ex=document.getElementById('ex');
  ex.innerHTML=`<div class="expl mwr">❌ <b>Chưa đúng cặp.</b> Bạn cứ ghép tiếp nhé.<br>❓ ${P(xq.question)}</div>${explain(xq)}${xa&&xa!==xq?`<div class="expl">🔁 “${P(xa.answer)}” là đáp án của câu: ${P(xa.question)}</div>`:''}`;}
+
+// ===== THI THỬ GIỐNG THI THẬT (110 câu / 90 phút) =====
+const MOCK_N=110,MOCK_GEN=100,MOCK_VA=10,MOCK_MIN=90,MOCK_PASS=75;
+const isVA=x=>/virginia|dpor|18vac|41-20/i.test((x.explanation||'')+' '+(x.question||''));
+function pickMock(){
+  const seen=new Set(),gen=[];
+  for(const x of shuf(D.filter(x=>!isVA(x)))){const k=norm(x.question);if(seen.has(k))continue;seen.add(k);gen.push(x);if(gen.length>=MOCK_GEN)break}
+  const va=shuf(D.filter(isVA)).slice(0,MOCK_VA);
+  return shuf(gen.concat(va)).map(x=>({x,os:opts(x),sec:isVA(x)?'va':'gen'}));
+}
+let MK=null,MKF='all';
+const fmtT=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+function mockHome(){clearAll();dqMode(null);MK=null;
+  const h=(S.mock||[]).slice().reverse();
+  app.innerHTML=`<div class="card"><b>📝 Thi thử giống thi thật</b><p>110 câu trong 90 phút, giống đề thi thật ở Virginia:</p><p>• 100 câu kiến thức chung + 10 câu luật Virginia<br>• Không hiện đáp án đúng khi đang làm<br>• Hết 90 phút sẽ tự nộp bài<br>• Điểm đậu: đúng từ 75 câu trở lên</p><p class="small">Đề bốc ngẫu nhiên mỗi lần từ ${D.length} câu trong trang này. Luật Virginia chỉ có ${D.filter(isVA).length} câu nên sẽ gặp lại câu cũ ở các lần thi sau.</p><div class="row"><button id="mstart" style="background:var(--ac);font-size:1.15rem;flex:2">▶️ Bắt đầu thi thử</button><button id="tomenu">🏠 Về menu</button></div></div>
+  ${h.length?`<div class="card"><b>📚 Các lần thi trước</b><div class="wl">${h.map(a=>`<div>${new Date(a.t).toLocaleDateString('vi-VN')} ${new Date(a.t).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'})} – <b>${a.c}/110 (${a.pct}%)</b> ${a.c>=MOCK_PASS?'✅ Đậu':'❌ Chưa đậu'} · chung ${a.g}/100 · luật VA ${a.v}/10 · ${Math.floor(a.secs/60)} phút ${a.secs%60} giây</div>`).join('')}</div></div>`:''}`;
+  document.getElementById('mstart').onclick=()=>mockStart();
+  document.getElementById('tomenu').onclick=menu;
+}
+function mockStart(){clearAll();dqMode(null);MKF='all';
+  MK={qs:pickMock(),ans:Array(MOCK_N).fill(-1),flag:Array(MOCK_N).fill(false),i:0,left:MOCK_MIN*60,done:false};
+  timers.push(setInterval(()=>{if(!MK||MK.done)return;MK.left--;const e=document.getElementById('mt');if(e){e.textContent='⏱ '+fmtT(Math.max(0,MK.left));if(MK.left<=600)e.classList.add('warn')}if(MK.left===600)toast('⏰ Còn 10 phút!');if(MK.left===300)toast('⏰ Còn 5 phút!');if(MK.left<=0)mockFinish(true)},1000));
+  mockQ();
+}
+function mockQ(){const q=MK.qs[MK.i],x=q.x;
+  const answered=MK.ans.filter(a=>a>=0).length;
+  app.innerHTML=`<div class="mkbar"><div class="top"><span class="pill">Câu ${MK.i+1}/${MOCK_N}</span><span class="pill" id="mt">⏱ ${fmtT(Math.max(0,MK.left))}</span><span class="pill">Đã làm ${answered}/${MOCK_N}</span></div></div>
+  <div class="card pop"><div class="top"><span class="pill">${q.sec==='va'?'⚖️ Luật Virginia':'📚 Kiến thức chung'}</span>${MK.flag[MK.i]?'<span class="pill">🚩 Đã đánh dấu</span>':''}</div><br>${card(x)}
+  <div class="opts">${q.os.map((o,k)=>`<button data-k="${k}" class="${MK.ans[MK.i]===k?'sel':''}">${'ABCD'[k]}. ${P(o.t)}</button>`).join('')}</div></div>
+  <div class="row"><button id="mprev" ${MK.i===0?'disabled':''}>⬅️ Câu trước</button><button id="mflag">${MK.flag[MK.i]?'🚩 Bỏ đánh dấu':'🚩 Đánh dấu'}</button><button id="mgrid">📋 Lưới câu</button></div>
+  <div id="mgridwrap"></div>
+  <div class="row" style="margin-top:8px"><button id="mnext" style="background:var(--ac)">${MK.i+1<MOCK_N?'Câu tiếp ➜':'Xem lại & nộp bài ➜'}</button></div>
+  <button id="mquit" style="width:100%;margin-top:8px;background:#5a1f2f">🏠 Thoát (không lưu kết quả)</button>`;
+  if(MK.left<=600){const e=document.getElementById('mt');e&&e.classList.add('warn')}
+  app.querySelectorAll('.opts button').forEach(b=>b.onclick=()=>{MK.ans[MK.i]=+b.dataset.k;mockQ()});
+  document.getElementById('mprev').onclick=()=>{if(MK.i>0){MK.i--;mockQ()}};
+  document.getElementById('mnext').onclick=()=>{if(MK.i+1<MOCK_N){MK.i++;mockQ()}else mockReview()};
+  document.getElementById('mflag').onclick=()=>{MK.flag[MK.i]=!MK.flag[MK.i];mockQ()};
+  document.getElementById('mgrid').onclick=()=>mockGrid();
+  document.getElementById('mquit').onclick=()=>{if(confirm('Thoát và bỏ bài thi này? Kết quả sẽ không được lưu.')){MK=null;menu()}};
+}
+function mockGrid(){const w=document.getElementById('mgridwrap');if(!w)return;
+  if(w.innerHTML){w.innerHTML='';return}
+  w.innerHTML=`<div class="card"><b>📋 Lưới câu</b><p class="small">Xanh = đã làm · viền vàng = đã đánh dấu · viền trắng = câu đang làm</p><div class="qgrid">${MK.qs.map((q,k)=>`<button data-k="${k}" class="${MK.ans[k]>=0?'done':''} ${MK.flag[k]?'flag':''} ${k===MK.i?'cur':''}">${k+1}</button>`).join('')}</div></div>`;
+  w.querySelectorAll('button').forEach(b=>b.onclick=()=>{MK.i=+b.dataset.k;mockQ()});
+}
+function mockReview(){const un=MK.ans.map((a,k)=>a<0?k:null).filter(k=>k!==null);const fl=MK.flag.map((f,k)=>f?k+1:null).filter(Boolean);
+  app.innerHTML=`<div class="card"><b>📋 Kiểm tra trước khi nộp</b><p>Đã làm <b>${MOCK_N-un.length}/${MOCK_N}</b> câu.<br>${un.length?`Còn <b>${un.length}</b> câu chưa làm: ${un.map(k=>k+1).join(', ')}<br>`:''}${fl.length?`Đã đánh dấu <b>${fl.length}</b> câu: ${fl.join(', ')}<br>`:''}Thời gian còn lại: <b>${fmtT(Math.max(0,MK.left))}</b></p>
+  <div class="row"><button id="mback" style="flex:2">⬅️ Quay lại làm tiếp</button><button id="msubmit" style="background:var(--ac);flex:2">✅ Nộp bài</button></div></div>`;
+  document.getElementById('mback').onclick=()=>{MK.i=un.length?un[0]:MK.i;mockQ()};
+  document.getElementById('msubmit').onclick=()=>mockFinish(false);
+}
+function mockFinish(auto){if(!MK||MK.done)return;MK.done=true;clearAll();
+  const secs=MOCK_MIN*60-Math.max(0,MK.left);
+  let c=0,g=0,v=0;const rows=MK.qs.map((q,k)=>{const ok=MK.ans[k]>=0&&q.os[MK.ans[k]].ok;if(ok){c++;if(q.sec==='va')v++;else g++}return{q,k,ok,sel:MK.ans[k]}});
+  const pct=Math.round(c/MOCK_N*100);
+  S.mock.push({t:Date.now(),c,n:MOCK_N,g,v,pct,secs});if(S.mock.length>30)S.mock=S.mock.slice(-30);save();
+  mockResult(rows,c,g,v,pct,secs,auto);
+}
+function mockResult(rows,c,g,v,pct,secs,auto){const pass=c>=MOCK_PASS;
+  const nWrong=rows.filter(r=>!r.ok&&r.sel>=0).length,nBlank=rows.filter(r=>r.sel<0).length;
+  app.innerHTML=`<div class="card res pop"><div class="big">${pass?'🏆':'💪'} ${c}/${MOCK_N}</div><div>${pass?'ĐẬU – chúc mừng!':'Chưa đậu – ôn thêm rồi thi lại nhé!'} · đúng ${pct}%${auto?' · (hết giờ, tự nộp bài)':''}</div><br>
+  <div class="stats"><div><b>${g}/100</b>Kiến thức chung</div><div><b>${v}/10</b>Luật Virginia</div><div><b>${Math.floor(secs/60)}:${String(secs%60).padStart(2,'0')}</b>Thời gian làm</div><div><b>${MOCK_PASS}</b>Mốc đậu</div></div>
+  <p class="small">Mốc đậu là đúng từ 75 câu trên 110 câu.</p>
+  <div class="row"><button data-f="all" class="on">Tất cả (${rows.length})</button><button data-f="wrong">Câu sai (${nWrong})</button><button data-f="blank">Chưa làm (${nBlank})</button></div>
+  <div id="mrev" style="text-align:left"></div><br>
+  <div class="col"><button id="magain" style="background:var(--ac)">🔁 Thi lại đề mới</button><button id="tomenu">🏠 Về menu</button></div></div>`;
+  const draw=()=>{const list=rows.filter(r=>MKF==='all'?true:MKF==='wrong'?!r.ok&&r.sel>=0:r.sel<0);
+    document.getElementById('mrev').innerHTML=list.map(r=>{const x=r.q.x;
+      return `<div class="rev ${r.ok?'':'wrong'}"><b>Câu ${r.k+1}${r.q.sec==='va'?' · ⚖️ Luật Virginia':''}</b> ${r.ok?'✅':r.sel<0?'⬜ Chưa trả lời':'❌'}<div class="q" style="font-size:1rem">${P(x.question)}</div>${r.sel<0?'':`<div class="mine">Bạn chọn: ${P(r.q.os[r.sel].t)}</div>`}${explain(x)}</div>`}).join('')||'<p>Không có câu nào.</p>'};
+  draw();
+  app.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{MKF=b.dataset.f;app.querySelectorAll('[data-f]').forEach(z=>z.classList.toggle('on',z===b));draw()});
+  document.getElementById('magain').onclick=()=>mockStart();
+  document.getElementById('tomenu').onclick=menu;
+}
 
 save();menu();
 </script></body></html>
