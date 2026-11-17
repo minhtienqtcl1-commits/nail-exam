@@ -186,7 +186,7 @@ input.code{text-transform:uppercase;letter-spacing:.35em;font-weight:800;text-al
 <button data-filter="am" class="fp-btn">Ấm áp</button>
 <button data-filter="mat" class="fp-btn">Mát mẻ</button>
 </div>
-<div class="fp-note">Chỉ làm đẹp camera trên màn hình của bạn — không đổi video YouTube, không đổi màn hình người kia.</div>
+<div class="fp-note">Bộ lọc này làm đẹp camera của bạn và người kia cũng thấy như vậy — không đổi video YouTube.</div>
 </div>
 <button id="selfShowBtn" class="hidden">📷 Hiện cam của bạn</button>
 </div>
@@ -197,7 +197,7 @@ input.code{text-transform:uppercase;letter-spacing:.35em;font-weight:800;text-al
 <button id="btnFilter">✨ Bộ lọc</button>
 <button id="btnEnd" class="off">📞 Kết thúc</button>
 </div>
-<div class="small" style="margin-top:8px">⛶ Bấm “Toàn màn hình” của trang này thì video YouTube phóng to hết màn hình mà vẫn thấy mặt người kia ở góc — bấm vào mặt người kia hoặc nút “Đổi góc” để đổi góc, nút “Ẩn mặt” để ẩn cả hai ô mặt. Đừng bấm nút toàn màn hình của riêng YouTube, vì nút đó sẽ giấu mất mặt người kia. Xoay điện thoại dọc hay ngang đều coi được — xoay ngang thì video to hơn, mặt người kia vẫn ở góc. Khi xem toàn màn hình, khung nhắn tin tạm ẩn đi; thoát ra là nhắn lại được. Bấm “✨ Bộ lọc” để chọn bộ lọc làm đẹp cho camera — chỉ đổi trên màn hình của bạn thôi. Chạm 2 lần vào mặt người nào thì mặt đó phóng to gần hết màn hình, chạm 2 lần nữa để thu nhỏ.</div>
+<div class="small" style="margin-top:8px">⛶ Bấm “Toàn màn hình” của trang này thì video YouTube phóng to hết màn hình mà vẫn thấy mặt người kia ở góc — bấm vào mặt người kia hoặc nút “Đổi góc” để đổi góc, nút “Ẩn mặt” để ẩn cả hai ô mặt. Đừng bấm nút toàn màn hình của riêng YouTube, vì nút đó sẽ giấu mất mặt người kia. Xoay điện thoại dọc hay ngang đều coi được — xoay ngang thì video to hơn, mặt người kia vẫn ở góc. Khi xem toàn màn hình, khung nhắn tin tạm ẩn đi; thoát ra là nhắn lại được. Bấm “✨ Bộ lọc” để chọn bộ lọc làm đẹp cho camera của bạn — người kia cũng thấy hình đã lọc. Chạm 2 lần vào mặt người nào thì mặt đó phóng to gần hết màn hình, chạm 2 lần nữa để thu nhỏ.</div>
 
 <h2 style="margin-top:16px">Nhắn tin trong phòng</h2>
 <div id="chatList"></div>
@@ -277,6 +277,44 @@ function enterRoom(){
 }
 
 /* ============ Camera & mic ============ */
+/* Bộ lọc đồng bộ 2 bên: filter phải "nướng" vào video gửi đi thì bên kia
+   mới thấy. Cách làm: vẽ camera lên canvas với ctx.filter, rồi lấy track
+   video từ canvas (captureStream) + track mic gốc làm luồng gửi đi. Bên
+   nhận thấy đúng hình đã lọc, không cần làm gì thêm. */
+var outgoingStream = null, currentFilterName = "none";
+var filterVideo = null, filterCanvas = null, filterCtx = null, filterRaf = 0, canvasFilterOK = false;
+function setupFilteredStream(stream){
+  try{
+    filterVideo = document.createElement("video");
+    filterVideo.muted = true;
+    filterVideo.playsInline = true;
+    filterVideo.srcObject = stream;
+    filterVideo.play().catch(function(){});
+    filterCanvas = document.createElement("canvas");
+    filterCanvas.width = 640; filterCanvas.height = 480;
+    filterCtx = filterCanvas.getContext("2d");
+    canvasFilterOK = !!(filterCtx && ("filter" in filterCtx));
+    var canvasTrack = filterCanvas.captureStream(30).getVideoTracks()[0];
+    var tracks = [];
+    if(canvasTrack) tracks.push(canvasTrack);
+    var audio = stream.getAudioTracks()[0];
+    if(audio) tracks.push(audio);
+    outgoingStream = new MediaStream(tracks);
+    var lv = $("localVideo");
+    if(lv) lv.style.filter = "";
+    var draw = function(){
+      filterRaf = requestAnimationFrame(draw);
+      if(!filterVideo || filterVideo.readyState < 2 || !filterCtx) return;
+      var w = filterVideo.videoWidth || 640, h = filterVideo.videoHeight || 480;
+      if(filterCanvas.width !== w || filterCanvas.height !== h){ filterCanvas.width = w; filterCanvas.height = h; }
+      if(canvasFilterOK){ try{ filterCtx.filter = FILTERS[currentFilterName] || "none"; }catch(e){} }
+      try{ filterCtx.drawImage(filterVideo, 0, 0, filterCanvas.width, filterCanvas.height); }catch(e){}
+    };
+    draw();
+  }catch(e){
+    outgoingStream = null;
+  }
+}
 function startCamera(){
   if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
     $("camError").classList.remove("hidden");
@@ -286,7 +324,8 @@ function startCamera(){
   navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}, audio:true})
     .then(function(stream){
       localStream = stream;
-      $("localVideo").srcObject = stream;
+      setupFilteredStream(stream);
+      $("localVideo").srcObject = outgoingStream || stream;
       if(role === "guest") callHost();
     })
     .catch(function(err){
@@ -314,6 +353,8 @@ $("btnCam").addEventListener("click", function(){
 $("btnEnd").addEventListener("click", function(){
   try{ if(conn) conn.close(); }catch(e){}
   try{ if(peer) peer.destroy(); }catch(e){}
+  try{ if(filterRaf) cancelAnimationFrame(filterRaf); }catch(e){}
+  try{ if(outgoingStream) outgoingStream.getTracks().forEach(function(t){ t.stop(); }); }catch(e){}
   try{ if(localStream) localStream.getTracks().forEach(function(t){ t.stop(); }); }catch(e){}
   location.reload();
 });
@@ -338,7 +379,7 @@ function startPeer(){
     setStatus("✅ Đã kết nối với người kia", true);
   });
   peer.on("call", function(call){
-    try{ call.answer(localStream || undefined); }catch(e){ try{ call.answer(); }catch(e2){} }
+    try{ call.answer(outgoingStream || localStream || undefined); }catch(e){ try{ call.answer(); }catch(e2){} }
     call.on("stream", function(stream){ showRemote(stream); });
     call.on("close", function(){ showRemote(null); });
     call.on("error", function(){ showRemote(null); });
@@ -372,7 +413,7 @@ function connectToHost(attempt){
 function callHost(){
   if(role !== "guest" || !peer || peer.destroyed) return;
   var call;
-  try{ call = peer.call(otherPeerId, localStream || undefined); }
+  try{ call = peer.call(otherPeerId, outgoingStream || localStream || undefined); }
   catch(e){ try{ call = peer.call(otherPeerId); }catch(e2){ return; } }
   if(!call) return;
   call.on("stream", function(stream){ showRemote(stream); });
@@ -665,9 +706,10 @@ function cycleRemoteCorner(){
   else { local.classList.remove("pos-bl"); }
   armFsHideTimer();
 }
-/* ============ Bộ lọc làm đẹp cho camera (chỉ trên màn hình của bạn) ============
-   Bộ lọc chỉ gắn vào 2 thẻ <video> camera, KHÔNG bao giờ gắn vào iframe
-   YouTube. Mỗi người tự chọn trên máy mình, không gửi sang bên kia. */
+/* ============ Bộ lọc làm đẹp cho camera (đồng bộ 2 bên) ============
+   Bộ lọc "nướng" vào luồng video gửi đi (canvas + captureStream) nên
+   người kia thấy đúng hình đã lọc. KHÔNG bao giờ gắn vào iframe YouTube.
+   Mỗi người tự chọn bộ lọc cho camera của mình trên máy mình. */
 var FILTERS = {
   none: "",
   trang: "brightness(1.18) contrast(1.05) saturate(1.08)",
@@ -676,15 +718,19 @@ var FILTERS = {
   mat: "brightness(1.08) saturate(1.12) hue-rotate(-14deg)"
 };
 function applyFilter(name){
-  var f = FILTERS[name] || "";
-  var lv = $("localVideo"), rv = $("remoteVideo");
-  if(lv) lv.style.filter = f;
-  if(rv) rv.style.filter = f;
+  if(!FILTERS.hasOwnProperty(name)) name = "none";
+  currentFilterName = name;
   var btns = document.querySelectorAll("#filterPanel .fp-btn");
   for(var i=0;i<btns.length;i++){
     btns[i].classList.toggle("on", btns[i].getAttribute("data-filter") === name);
   }
   try{ localStorage.setItem("watch-filter", name); }catch(e){}
+  /* Dự phòng máy cũ không hỗ trợ ctx.filter: chỉ đổi màu trên màn hình
+     của mình (như bản cũ) — bên kia sẽ thấy hình thường. */
+  if(!canvasFilterOK && filterVideo){
+    var lv = $("localVideo");
+    if(lv) lv.style.filter = FILTERS[name] || "";
+  }
 }
 function toggleFilterPanel(){
   var panel = $("filterPanel");
