@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Cùng xem YouTube — Tiến &amp; Ngân</title>
+<style>
+:root{--bg:#1d1433;--card:#2c2050;--ac:#ff5fa2;--ok:#3ddc97;--bad:#ff5c5c;--kw:#ffd84d;--tx:#fff}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font-family:-apple-system,system-ui,"Segoe UI",Roboto,sans-serif;background:linear-gradient(160deg,#1d1433,#3a1c5c);color:var(--tx);min-height:100vh;padding:env(safe-area-inset-top) 12px 40px}
+main{max-width:900px;margin:auto}
+h1{font-size:1.35rem;margin:10px 0 4px}
+h2{font-size:1.05rem;margin:0 0 8px}
+.small{font-size:.88rem;opacity:.85;line-height:1.5}
+.card{background:var(--card);border-radius:18px;padding:18px;margin:12px 0;box-shadow:0 6px 20px #0005}
+button{font:inherit;color:inherit;border:0;border-radius:14px;background:#3b2c6b;padding:14px 16px;min-height:52px;cursor:pointer}
+button:active{transform:scale(.97)}
+button.primary{background:linear-gradient(135deg,#ff5fa2,#b388ff);font-weight:700}
+button.on{background:var(--ok);color:#002}
+button.off{background:var(--bad)}
+input{font:inherit;color:#111;border:0;border-radius:12px;padding:13px 14px;width:100%;min-height:52px}
+input.code{text-transform:uppercase;letter-spacing:.35em;font-weight:800;text-align:center;font-size:1.3rem}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.row>*{flex:1;min-width:140px}
+.pill{display:inline-block;background:#ffffff1a;border-radius:99px;padding:6px 12px;font-size:.9rem}
+.pill.ok{background:var(--ok);color:#002}
+.pill.wait{background:var(--kw);color:#000}
+.bigcode{font-size:2.2rem;font-weight:800;letter-spacing:.35em;text-align:center;background:#0003;border-radius:14px;padding:12px 8px;margin:10px 0}
+#player{width:100%;aspect-ratio:16/9;background:#000;border-radius:14px;overflow:hidden}
+#player iframe{width:100%;height:100%;border:0}
+.videos{display:grid;grid-template-columns:1.6fr 1fr;gap:8px;margin-top:10px}
+.vid{position:relative;background:#000;border-radius:14px;overflow:hidden;aspect-ratio:4/3}
+.vid video{width:100%;height:100%;object-fit:cover;display:block}
+.vid span{position:absolute;left:8px;bottom:8px;background:#000a;border-radius:99px;padding:4px 10px;font-size:.8rem}
+.vid.off span{color:var(--kw)}
+#chatList{max-height:220px;overflow:auto;text-align:left;font-size:.95rem;line-height:1.5}
+#chatList div{border-bottom:1px solid #fff2;padding:6px 0}
+#chatList b{color:var(--kw)}
+.toast{background:var(--kw);color:#000;border-radius:10px;padding:8px 12px;font-size:.9rem;margin-top:8px;display:none}
+.err{background:#ff5c5c22;border:1px solid var(--bad);border-radius:10px;padding:10px;margin-top:8px;font-size:.92rem;line-height:1.5}
+.hidden{display:none!important}
+.steps{line-height:1.7}
+.steps b{color:var(--kw)}
+</style>
+</head>
+<body>
+<main>
+<header>
+<h1>📺 Cùng xem YouTube</h1>
+<div class="small">Của Tiến &amp; Ngân — vừa gọi video thấy mặt nhau, vừa cùng coi một video YouTube.</div>
+</header>
+
+<!-- MÀN HÌNH CHÍNH -->
+<section id="home" class="card">
+<h2>Bước 1: Nhập tên của bạn</h2>
+<input id="myName" placeholder="Tên của bạn (ví dụ: Tiến)" maxlength="20">
+<div style="height:10px"></div>
+<div class="row">
+<button class="primary" id="btnCreate">📝 Tạo phòng</button>
+<button id="btnJoinShow">🔑 Vào phòng</button>
+</div>
+<div id="joinBox" class="hidden" style="margin-top:12px">
+<input id="roomCodeInput" class="code" placeholder="MÃ PHÒNG" maxlength="6">
+<div style="height:10px"></div>
+<button class="primary" id="btnJoin" style="width:100%">Vào phòng</button>
+</div>
+<div class="card" style="background:#0003;box-shadow:none;margin:14px 0 0">
+<div class="small steps">
+<b>Cách dùng:</b><br>
+1. Một người bấm <b>Tạo phòng</b>, lấy mã phòng gửi cho người kia.<br>
+2. Người kia mở link này, nhập mã phòng rồi bấm <b>Vào phòng</b>.<br>
+3. Cả hai cùng ở trong phòng, bấm cho phép camera và mic, rồi dán link YouTube để cùng coi.<br>
+4. Một người bấm phát, tạm dừng hay tua thì bên kia chạy theo.
+</div>
+</div>
+<p class="small">🔒 Không ghi hình, không theo dõi vị trí, không biết ai đang online khi không mở app. Chỉ khi cả hai cùng ở trong phòng thì mới thấy và nghe nhau.</p>
+</section>
+
+<!-- TRONG PHÒNG -->
+<section id="room" class="card hidden">
+<div class="row" style="align-items:center">
+<div><span class="pill wait" id="statusPill">⏳ Đang chờ người kia…</span></div>
+<div style="text-align:right"><span class="pill">Phòng: <b id="roomCodeLabel"></b></span></div>
+</div>
+<div class="bigcode" id="roomCodeBig"></div>
+<button id="btnCopy" style="width:100%">📋 Sao chép mã phòng</button>
+<div class="toast" id="toast"></div>
+
+<h2 style="margin-top:16px">Video YouTube chung</h2>
+<div class="row">
+<input id="ytInput" placeholder="Dán link YouTube hoặc mã video (ví dụ: dQw4w9WgXcQ)">
+<button class="primary" id="btnLoad">▶ Mở video</button>
+</div>
+<div id="ytError" class="err hidden"></div>
+<div style="height:10px"></div>
+<div id="player"><div style="display:flex;align-items:center;justify-content:center;height:100%;opacity:.7;padding:20px;text-align:center">Chưa có video.<br>Dán link YouTube ở trên rồi bấm “Mở video”.</div></div>
+<div class="small" id="syncNote" style="margin-top:6px">Chưa đồng bộ — mở video rồi bấm phát, bên kia sẽ chạy theo.</div>
+
+<h2 style="margin-top:16px">Video của hai người</h2>
+<div class="videos">
+<div class="vid" id="remoteBox"><video id="remoteVideo" playsinline autoplay></video><span id="remoteLabel">Người kia — chưa vào</span></div>
+<div class="vid" id="localBox"><video id="localVideo" playsinline autoplay muted></video><span id="localLabel">Bạn</span></div>
+</div>
+<div id="camError" class="err hidden"></div>
+<div class="row" style="margin-top:10px">
+<button id="btnMic">🎤 Tắt mic</button>
+<button id="btnCam">📷 Tắt camera</button>
+<button id="btnEnd" class="off">📞 Kết thúc</button>
+</div>
+
+<h2 style="margin-top:16px">Nhắn tin trong phòng</h2>
+<div id="chatList"></div>
+<div class="row" style="margin-top:8px">
+<input id="chatInput" placeholder="Nhắn gì đó…" maxlength="300">
+<button class="primary" id="btnSend">Gửi</button>
+</div>
+</section>
+</main>
+
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+"use strict";
+/* ============ Trạng thái chung ============ */
+var myName = "", roomCode = "", role = "", myPeerId = "", peer = null, conn = null;
+var localStream = null, remoteStream = null;
+var ytPlayer = null, ytReady = false, pendingVideoId = null;
+var applyingRemote = false, lastSentAt = 0, lastTime = 0, lastPoll = Date.now();
+var $ = function(id){ return document.getElementById(id); };
+function showToast(msg){ var t=$("toast"); t.textContent=msg; t.style.display="block"; setTimeout(function(){ t.style.display="none"; }, 3500); }
+function setStatus(text, ok){ var p=$("statusPill"); p.textContent=text; p.className = "pill " + (ok ? "ok" : "wait"); }
+
+/* ============ Mã phòng ============ */
+function makeCode(){
+  var chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789", out = "";
+  for(var i=0;i<6;i++){ out += chars[Math.floor(Math.random()*chars.length)]; }
+  return out;
+}
+
+/* ============ Lấy mã video YouTube từ link ============ */
+function parseYouTubeId(input){
+  if(!input) return null;
+  var s = input.trim();
+  if(/^[A-Za-z0-9_-]{11}$/.test(s)) return s; // mã video trần
+  var m;
+  m = s.match(/[?&]v=([A-Za-z0-9_-]{11})/); if(m) return m[1];
+  m = s.match(/youtu\.be\/([A-Za-z0-9_-]{11})/); if(m) return m[1];
+  m = s.match(/\/(shorts|embed|live|v)\/([A-Za-z0-9_-]{11})/); if(m) return m[2];
+  return null;
+}
+
+/* ============ Màn hình chính ============ */
+$("btnJoinShow").addEventListener("click", function(){
+  $("joinBox").classList.toggle("hidden");
+  $("roomCodeInput").focus();
+});
+$("btnCreate").addEventListener("click", function(){
+  myName = $("myName").value.trim() || "Tiến";
+  roomCode = makeCode(); role = "host";
+  enterRoom();
+});
+$("btnJoin").addEventListener("click", function(){
+  myName = $("myName").value.trim() || "Ngân";
+  var code = $("roomCodeInput").value.trim().toUpperCase();
+  if(!/^[A-Z0-9]{6}$/.test(code)){ alert("Mã phòng có 6 ký tự, ví dụ: K7M2Q9. Bạn kiểm tra lại nhé."); return; }
+  roomCode = code; role = "guest";
+  enterRoom();
+});
+$("btnCopy").addEventListener("click", function(){
+  var code = roomCode;
+  function done(){ showToast("Đã sao chép mã phòng: " + code); }
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(code).then(done, function(){ prompt("Sao chép mã phòng này:", code); });
+  } else { prompt("Sao chép mã phòng này:", code); }
+});
+
+function enterRoom(){
+  myPeerId = "watch-" + roomCode.toLowerCase() + "-" + role;
+  $("home").classList.add("hidden");
+  $("room").classList.remove("hidden");
+  $("roomCodeLabel").textContent = roomCode;
+  $("roomCodeBig").textContent = roomCode;
+  setStatus(role === "host" ? "⏳ Phòng đã tạo — đang chờ người kia vào…" : "⏳ Đang vào phòng…", false);
+  startCamera();
+  startPeer();
+}
+
+/* ============ Camera & mic ============ */
+function startCamera(){
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    $("camError").classList.remove("hidden");
+    $("camError").textContent = "Điện thoại này không cho dùng camera trong trình duyệt. Bạn vẫn coi YouTube chung được, chỉ không thấy mặt nhau thôi.";
+    return;
+  }
+  navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}, audio:true})
+    .then(function(stream){
+      localStream = stream;
+      $("localVideo").srcObject = stream;
+      if(role === "guest") callHost();
+    })
+    .catch(function(err){
+      $("camError").classList.remove("hidden");
+      $("camError").textContent = "Không mở được camera hoặc mic. Bạn kiểm tra quyền camera trong trình duyệt rồi tải lại trang nhé. Bạn vẫn coi YouTube chung được.";
+    });
+}
+$("btnMic").addEventListener("click", function(){
+  if(!localStream) return;
+  var track = localStream.getAudioTracks()[0];
+  if(!track) return;
+  track.enabled = !track.enabled;
+  $("btnMic").textContent = track.enabled ? "🎤 Tắt mic" : "🔇 Bật mic";
+  $("btnMic").className = track.enabled ? "" : "off";
+});
+$("btnCam").addEventListener("click", function(){
+  if(!localStream) return;
+  var track = localStream.getVideoTracks()[0];
+  if(!track) return;
+  track.enabled = !track.enabled;
+  $("btnCam").textContent = track.enabled ? "📷 Tắt camera" : "📷 Bật camera";
+  $("btnCam").className = track.enabled ? "" : "off";
+  $("localBox").classList.toggle("off", !track.enabled);
+});
+$("btnEnd").addEventListener("click", function(){
+  try{ if(conn) conn.close(); }catch(e){}
+  try{ if(peer) peer.destroy(); }catch(e){}
+  try{ if(localStream) localStream.getTracks().forEach(function(t){ t.stop(); }); }catch(e){}
+  location.reload();
+});
+</script>
+<script>
+"use strict";
+/* ============ Kết nối PeerJS (gọi video + nhắn tin) ============ */
+var otherPeerId = "";
+function startPeer(){
+  if(typeof Peer === "undefined"){
+    setStatus("⚠️ Không tải được PeerJS — kiểm tra mạng rồi tải lại trang.", false);
+    return;
+  }
+  otherPeerId = "watch-" + roomCode.toLowerCase() + "-" + (role === "host" ? "guest" : "host");
+  peer = new Peer(myPeerId, {debug: 0});
+  peer.on("open", function(){
+    if(role === "guest"){ connectToHost(0); }
+  });
+  peer.on("connection", function(c){
+    conn = c;
+    wireConn();
+    setStatus("✅ Đã kết nối với người kia", true);
+  });
+  peer.on("call", function(call){
+    try{ call.answer(localStream || undefined); }catch(e){ try{ call.answer(); }catch(e2){} }
+    call.on("stream", function(stream){ showRemote(stream); });
+    call.on("close", function(){ showRemote(null); });
+    call.on("error", function(){ showRemote(null); });
+  });
+  peer.on("error", function(err){
+    if(err && err.type === "unavailable-id"){
+      setStatus("⚠️ Mã phòng này đang có người dùng rồi. Tạo phòng mới nhé.", false);
+    } else if(err && err.type === "peer-unavailable"){
+      // Người kia chưa vào — khách sẽ tự thử lại.
+    } else {
+      setStatus("⚠️ Chưa kết nối được. Kiểm tra mạng rồi tải lại trang.", false);
+    }
+  });
+}
+function connectToHost(attempt){
+  if(!peer || peer.destroyed) return;
+  if(conn && conn.open) return;
+  var c = peer.connect(otherPeerId, {reliable: true});
+  c.on("open", function(){
+    conn = c;
+    wireConn();
+    setStatus("✅ Đã kết nối với người kia", true);
+    callHost();
+  });
+  c.on("error", function(){
+    if(attempt < 20){ setTimeout(function(){ connectToHost(attempt + 1); }, 3000); }
+    else { setStatus("⚠️ Không thấy phòng này. Kiểm tra lại mã phòng nhé.", false); }
+  });
+  c.on("close", function(){ setStatus("⏳ Người kia đã rời phòng.", false); });
+}
+function callHost(){
+  if(role !== "guest" || !peer || peer.destroyed) return;
+  var call;
+  try{ call = peer.call(otherPeerId, localStream || undefined); }
+  catch(e){ try{ call = peer.call(otherPeerId); }catch(e2){ return; } }
+  if(!call) return;
+  call.on("stream", function(stream){ showRemote(stream); });
+  call.on("close", function(){ showRemote(null); });
+  call.on("error", function(){});
+}
+function showRemote(stream){
+  remoteStream = stream;
+  var v = $("remoteVideo");
+  if(stream){
+    v.srcObject = stream;
+    $("remoteLabel").textContent = "Người kia";
+    setStatus("✅ Đang gọi video với người kia", true);
+  } else {
+    v.srcObject = null;
+    $("remoteLabel").textContent = "Người kia — chưa vào";
+  }
+}
+function wireConn(){
+  if(!conn) return;
+  conn.on("data", function(msg){ onPeerMessage(msg); });
+  conn.on("close", function(){ setStatus("⏳ Người kia đã rời phòng.", false); });
+}
+function sendMsg(msg){
+  if(conn && conn.open){
+    try{ conn.send(msg); }catch(e){}
+  }
+}
+
+/* ============ Nhắn tin trong phòng ============ */
+function addChat(name, text){
+  var div = document.createElement("div");
+  var b = document.createElement("b"); b.textContent = name + ": ";
+  var span = document.createElement("span"); span.textContent = text;
+  div.appendChild(b); div.appendChild(span);
+  var list = $("chatList");
+  list.appendChild(div);
+  list.scrollTop = list.scrollHeight;
+}
+$("btnSend").addEventListener("click", sendChat);
+$("chatInput").addEventListener("keydown", function(e){ if(e.key === "Enter") sendChat(); });
+function sendChat(){
+  var text = $("chatInput").value.trim();
+  if(!text) return;
+  addChat(myName, text);
+  sendMsg({type: "chat", name: myName, text: text});
+  $("chatInput").value = "";
+}
+
+/* ============ YouTube đồng bộ ============ */
+function onYouTubeIframeAPIReady(){
+  ytReady = true;
+  if(pendingVideoId){ createPlayer(pendingVideoId); pendingVideoId = null; }
+}
+function createPlayer(videoId){
+  if(ytPlayer){ try{ ytPlayer.loadVideoById(videoId); }catch(e){} return; }
+  try{
+    ytPlayer = new YT.Player("player", {
+      videoId: videoId,
+      playerVars: {playsinline: 1, rel: 0, modestbranding: 1},
+      events: {
+        onStateChange: onPlayerState,
+        onError: onPlayerError
+      }
+    });
+  }catch(e){
+    $("ytError").classList.remove("hidden");
+    $("ytError").textContent = "Không mở được video này. Bạn thử dán link khác nhé.";
+  }
+}
+function onPlayerError(e){
+  var code = e && e.data;
+  if(code === 101 || code === 150){
+    $("ytError").classList.remove("hidden");
+    $("ytError").textContent = "Video này chủ kênh không cho xem nhúng trong trang khác, nên không coi chung được. Bạn dán link video khác nhé.";
+  } else {
+    $("ytError").classList.remove("hidden");
+    $("ytError").textContent = "Video này mở không được (lỗi " + code + "). Bạn thử video khác nhé.";
+  }
+}
+function onPlayerState(e){
+  if(applyingRemote) return; // đang chạy theo bên kia thì không gửi lại
+  if(!ytPlayer) return;
+  var t = 0;
+  try{ t = ytPlayer.getCurrentTime() || 0; }catch(err){}
+  if(e.data === YT.PlayerState.PLAYING){
+    if(Date.now() - lastSentAt > 800){ lastSentAt = Date.now(); sendMsg({type: "play", time: t}); }
+    $("syncNote").textContent = "▶ Đang phát — bên kia đang coi cùng lúc với bạn.";
+  } else if(e.data === YT.PlayerState.PAUSED){
+    if(Date.now() - lastSentAt > 800){ lastSentAt = Date.now(); sendMsg({type: "pause", time: t}); }
+    $("syncNote").textContent = "⏸ Đã tạm dừng — bên kia cũng dừng theo.";
+  }
+}
+$("btnLoad").addEventListener("click", function(){
+  var id = parseYouTubeId($("ytInput").value);
+  if(!id){
+    $("ytError").classList.remove("hidden");
+    $("ytError").textContent = "Link này không đúng. Bạn dán link YouTube đầy đủ, ví dụ: https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+    return;
+  }
+  $("ytError").classList.add("hidden");
+  loadVideo(id, true);
+});
+function loadVideo(videoId, announce){
+  if(!ytReady || typeof YT === "undefined"){ pendingVideoId = videoId; return; }
+  createPlayer(videoId);
+  if(announce){
+    sendMsg({type: "load", videoId: videoId});
+    $("syncNote").textContent = "📺 Đã mở video — bên kia cũng mở video này.";
+  }
+}
+// Phát hiện người dùng tua video: kiểm tra mỗi giây, nếu thời gian nhảy khác thường thì gửi lệnh tua.
+setInterval(function(){
+  if(!ytPlayer || applyingRemote) return;
+  var state = 0, now = 0;
+  try{ state = ytPlayer.getPlayerState(); now = ytPlayer.getCurrentTime() || 0; }catch(e){ return; }
+  var elapsed = (Date.now() - lastPoll) / 1000;
+  lastPoll = Date.now();
+  if(state === YT.PlayerState.PLAYING){
+    var drift = Math.abs((now - lastTime) - elapsed);
+    if(lastTime > 0 && drift > 2.5 && Date.now() - lastSentAt > 800){
+      lastSentAt = Date.now();
+      sendMsg({type: "seek", time: now});
+      $("syncNote").textContent = "⏩ Đã tua tới " + Math.floor(now/60) + ":" + String(Math.floor(now%60)).padStart(2, "0") + " — bên kia cũng tua theo.";
+    }
+  }
+  lastTime = now;
+}, 1000);
+
+/* ============ Nhận tin từ người kia ============ */
+function onPeerMessage(msg){
+  if(!msg || typeof msg !== "object") return;
+  if(msg.type === "chat"){
+    addChat(msg.name || "Người kia", msg.text || "");
+  } else if(msg.type === "load" && msg.videoId){
+    $("ytError").classList.add("hidden");
+    $("ytInput").value = "https://www.youtube.com/watch?v=" + msg.videoId;
+    loadVideo(msg.videoId, false);
+    $("syncNote").textContent = "📺 Người kia vừa mở một video — đang mở cùng bạn.";
+  } else if(msg.type === "play" && ytPlayer){
+    applyRemote(function(){
+      try{
+        var cur = ytPlayer.getCurrentTime() || 0;
+        if(Math.abs(cur - (msg.time || 0)) > 1.5) ytPlayer.seekTo(msg.time || 0, true);
+        ytPlayer.playVideo();
+      }catch(e){}
+    });
+    $("syncNote").textContent = "▶ Người kia bấm phát — đang chạy cùng.";
+  } else if(msg.type === "pause" && ytPlayer){
+    applyRemote(function(){
+      try{
+        var cur = ytPlayer.getCurrentTime() || 0;
+        if(Math.abs(cur - (msg.time || 0)) > 1.5) ytPlayer.seekTo(msg.time || 0, true);
+        ytPlayer.pauseVideo();
+      }catch(e){}
+    });
+    $("syncNote").textContent = "⏸ Người kia tạm dừng — đang dừng cùng.";
+  } else if(msg.type === "seek" && ytPlayer){
+    applyRemote(function(){
+      try{ ytPlayer.seekTo(msg.time || 0, true); }catch(e){}
+    });
+    $("syncNote").textContent = "⏩ Người kia vừa tua video — đang tua cùng.";
+  }
+}
+function applyRemote(fn){
+  applyingRemote = true;
+  showToast("Đang đồng bộ với người kia…");
+  try{ fn(); }catch(e){}
+  setTimeout(function(){ applyingRemote = false; }, 700);
+}
+</script>
+</body>
+</html>
