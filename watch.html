@@ -91,6 +91,21 @@ input.code{text-transform:uppercase;letter-spacing:.35em;font-weight:800;text-al
 /* Ẩn cả hai ô mặt trong toàn màn hình (nút "Ẩn mặt" ở thanh dưới) */
 #stage.is-fs.faces-hidden .vid{display:none!important}
 #stage.is-fs.faces-hidden #selfShowBtn{display:none!important}
+
+/* ===== Bộ lọc làm đẹp cho camera (chỉ camera, không chạm tới YouTube) ===== */
+/* Chạm 2 lần mới phóng to được nên phải tắt tính năng phóng to trang của trình duyệt khi chạm 2 lần */
+.vid{touch-action:manipulation;-webkit-user-select:none;user-select:none}
+#filterPanel{position:absolute;left:50%;transform:translateX(-50%);bottom:12px;z-index:30;background:#000d;border:1px solid #fff3;border-radius:16px;padding:12px;width:min(92%,430px);text-align:center}
+#stage.is-fs #filterPanel{bottom:max(76px,calc(env(safe-area-inset-bottom) + 64px))}
+#filterPanel .fp-title{font-weight:700;font-size:.95rem}
+#filterPanel .fp-row{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:8px}
+#filterPanel .fp-btn{flex:1;min-width:64px;min-height:44px;padding:8px 6px;font-size:.85rem;background:#ffffff22}
+#filterPanel .fp-btn.on{background:var(--ok);color:#002;font-weight:700}
+#filterPanel .fp-note{font-size:.8rem;opacity:.8;margin-top:8px;line-height:1.4}
+/* ===== Chạm 2 lần vào mặt để phóng to / thu nhỏ ===== */
+#stage .vid.zoomed{position:absolute!important;z-index:20!important;border:2px solid #fff;box-shadow:0 8px 30px #000c}
+#stage:not(.is-fs) .vid.zoomed{left:0!important;top:0!important;width:100%!important;height:100%!important;transform:none!important}
+#stage.is-fs .vid.zoomed{left:50%!important;top:47%!important;transform:translate(-50%,-50%)!important;width:min(92vw,calc(78vh*4/3))!important}
 </style>
 </head>
 <body>
@@ -156,10 +171,22 @@ input.code{text-transform:uppercase;letter-spacing:.35em;font-weight:800;text-al
 <div id="fsBar">
 <button id="btnFsPlay">⏯ Phát / Tạm dừng</button>
 <button id="btnFsCorner">🔀 Đổi góc</button>
+<button id="btnFsFilter">✨ Lọc</button>
 <button id="btnFsFaces">🙈 Ẩn mặt</button>
 <button id="btnFsMic">🎤 Mic</button>
 <button id="btnFsCam">📷 Camera</button>
 <button id="btnFsExit">⛶ Thoát</button>
+</div>
+<div id="filterPanel" class="hidden">
+<div class="fp-title">✨ Bộ lọc camera</div>
+<div class="fp-row">
+<button data-filter="none" class="fp-btn on">Tự nhiên</button>
+<button data-filter="trang" class="fp-btn">Trắng da</button>
+<button data-filter="min" class="fp-btn">Mịn da</button>
+<button data-filter="am" class="fp-btn">Ấm áp</button>
+<button data-filter="mat" class="fp-btn">Mát mẻ</button>
+</div>
+<div class="fp-note">Chỉ làm đẹp camera trên màn hình của bạn — không đổi video YouTube, không đổi màn hình người kia.</div>
 </div>
 <button id="selfShowBtn" class="hidden">📷 Hiện cam của bạn</button>
 </div>
@@ -167,9 +194,10 @@ input.code{text-transform:uppercase;letter-spacing:.35em;font-weight:800;text-al
 <div class="row" style="margin-top:10px">
 <button id="btnMic">🎤 Tắt mic</button>
 <button id="btnCam">📷 Tắt camera</button>
+<button id="btnFilter">✨ Bộ lọc</button>
 <button id="btnEnd" class="off">📞 Kết thúc</button>
 </div>
-<div class="small" style="margin-top:8px">⛶ Bấm “Toàn màn hình” của trang này thì video YouTube phóng to hết màn hình mà vẫn thấy mặt người kia ở góc — bấm vào mặt người kia hoặc nút “Đổi góc” để đổi góc, nút “Ẩn mặt” để ẩn cả hai ô mặt. Đừng bấm nút toàn màn hình của riêng YouTube, vì nút đó sẽ giấu mất mặt người kia. Xoay điện thoại dọc hay ngang đều coi được — xoay ngang thì video to hơn, mặt người kia vẫn ở góc. Khi xem toàn màn hình, khung nhắn tin tạm ẩn đi; thoát ra là nhắn lại được.</div>
+<div class="small" style="margin-top:8px">⛶ Bấm “Toàn màn hình” của trang này thì video YouTube phóng to hết màn hình mà vẫn thấy mặt người kia ở góc — bấm vào mặt người kia hoặc nút “Đổi góc” để đổi góc, nút “Ẩn mặt” để ẩn cả hai ô mặt. Đừng bấm nút toàn màn hình của riêng YouTube, vì nút đó sẽ giấu mất mặt người kia. Xoay điện thoại dọc hay ngang đều coi được — xoay ngang thì video to hơn, mặt người kia vẫn ở góc. Khi xem toàn màn hình, khung nhắn tin tạm ẩn đi; thoát ra là nhắn lại được. Bấm “✨ Bộ lọc” để chọn bộ lọc làm đẹp cho camera — chỉ đổi trên màn hình của bạn thôi. Chạm 2 lần vào mặt người nào thì mặt đó phóng to gần hết màn hình, chạm 2 lần nữa để thu nhỏ.</div>
 
 <h2 style="margin-top:16px">Nhắn tin trong phòng</h2>
 <div id="chatList"></div>
@@ -637,9 +665,98 @@ function cycleRemoteCorner(){
   else { local.classList.remove("pos-bl"); }
   armFsHideTimer();
 }
+/* ============ Bộ lọc làm đẹp cho camera (chỉ trên màn hình của bạn) ============
+   Bộ lọc chỉ gắn vào 2 thẻ <video> camera, KHÔNG bao giờ gắn vào iframe
+   YouTube. Mỗi người tự chọn trên máy mình, không gửi sang bên kia. */
+var FILTERS = {
+  none: "",
+  trang: "brightness(1.18) contrast(1.05) saturate(1.08)",
+  min: "brightness(1.08) contrast(0.96) saturate(1.05) blur(0.6px)",
+  am: "sepia(0.28) saturate(1.15) brightness(1.06)",
+  mat: "brightness(1.08) saturate(1.12) hue-rotate(-14deg)"
+};
+function applyFilter(name){
+  var f = FILTERS[name] || "";
+  var lv = $("localVideo"), rv = $("remoteVideo");
+  if(lv) lv.style.filter = f;
+  if(rv) rv.style.filter = f;
+  var btns = document.querySelectorAll("#filterPanel .fp-btn");
+  for(var i=0;i<btns.length;i++){
+    btns[i].classList.toggle("on", btns[i].getAttribute("data-filter") === name);
+  }
+  try{ localStorage.setItem("watch-filter", name); }catch(e){}
+}
+function toggleFilterPanel(){
+  var panel = $("filterPanel");
+  if(!panel) return;
+  var opening = panel.classList.contains("hidden");
+  panel.classList.toggle("hidden");
+  if(isFs()){
+    if(opening){ clearTimeout(fsHideTimer); stage.classList.remove("fs-hide-ui"); }
+    else { armFsHideTimer(); }
+  }
+}
+$("btnFilter").addEventListener("click", function(){ toggleFilterPanel(); });
+$("btnFsFilter").addEventListener("click", function(e){ e.stopPropagation(); toggleFilterPanel(); });
+(function(){
+  var btns = document.querySelectorAll("#filterPanel .fp-btn");
+  for(var i=0;i<btns.length;i++){
+    btns[i].addEventListener("click", function(e){
+      e.stopPropagation();
+      applyFilter(this.getAttribute("data-filter"));
+      $("filterPanel").classList.add("hidden");
+      armFsHideTimer();
+    });
+  }
+})();
+$("filterPanel").addEventListener("click", function(e){ e.stopPropagation(); });
+try{
+  var savedFilter = localStorage.getItem("watch-filter");
+  if(savedFilter && FILTERS.hasOwnProperty(savedFilter)) applyFilter(savedFilter);
+}catch(e){}
+
+/* ============ Chạm 2 lần vào mặt để phóng to / thu nhỏ ============
+   Chạm 1 lần vẫn làm việc cũ (mặt người kia: đổi góc; mặt mình: chỉ
+   hiện lại thanh nút). Chạm 2 lần trong 300ms thì phóng to mặt đó lên
+   gần hết khung xem; chạm 2 lần nữa để thu nhỏ. Dùng click +
+   touch-action:manipulation nên chạy cả chuột lẫn cảm ứng iPhone. */
+function restoreZoomLabel(box){
+  var span = box.querySelector("span");
+  var old = box.getAttribute("data-label");
+  if(span && old) span.textContent = old;
+}
+function unzoomBox(box){
+  box.classList.remove("zoomed");
+  restoreZoomLabel(box);
+}
+function clearZoom(){
+  unzoomBox($("remoteBox"));
+  unzoomBox($("localBox"));
+}
+function toggleZoom(box){
+  var zoomed = box.classList.toggle("zoomed");
+  var span = box.querySelector("span");
+  if(span){
+    if(zoomed){
+      box.setAttribute("data-label", span.textContent);
+      span.textContent = "Chạm 2 lần để thu nhỏ";
+    } else {
+      restoreZoomLabel(box);
+    }
+  }
+  if(isFs()) armFsHideTimer();
+}
+function vidTap(box, singleFn){
+  if(box._tapTimer){
+    clearTimeout(box._tapTimer); box._tapTimer = null;
+    toggleZoom(box);
+  } else {
+    box._tapTimer = setTimeout(function(){ box._tapTimer = null; singleFn(); }, 300);
+  }
+}
 $("remoteBox").addEventListener("click", function(e){
   e.stopPropagation();
-  cycleRemoteCorner();
+  vidTap($("remoteBox"), cycleRemoteCorner);
 });
 $("btnFsCorner").addEventListener("click", function(e){
   e.stopPropagation();
@@ -648,15 +765,17 @@ $("btnFsCorner").addEventListener("click", function(e){
 $("btnFsFaces").addEventListener("click", function(e){
   e.stopPropagation();
   var hidden = stage.classList.toggle("faces-hidden");
+  if(hidden) clearZoom();
   $("btnFsFaces").textContent = hidden ? "👀 Hiện mặt" : "🙈 Ẩn mặt";
   armFsHideTimer();
 });
 $("localBox").addEventListener("click", function(e){
   if(e.target && e.target.id === "btnHideSelf") return;
-  if(isFs()) armFsHideTimer();
+  vidTap($("localBox"), function(){ if(isFs()) armFsHideTimer(); });
 });
 $("btnHideSelf").addEventListener("click", function(e){
   e.stopPropagation();
+  unzoomBox($("localBox"));
   $("localBox").classList.add("self-hidden");
   $("selfShowBtn").classList.remove("hidden");
 });
