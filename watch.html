@@ -42,6 +42,30 @@ input.code{text-transform:uppercase;letter-spacing:.35em;font-weight:800;text-al
 .hidden{display:none!important}
 .steps{line-height:1.7}
 .steps b{color:var(--kw)}
+
+/* ===== Toàn màn hình: video + mặt người kia cùng lúc ===== */
+#stage{position:relative}
+#stage:fullscreen{background:#000}
+#stage.pseudo-fs{position:fixed;inset:0;width:100vw;height:100vh;max-width:none;z-index:9999;background:#000;margin:0;padding:0}
+#fsBar{display:none;position:absolute;left:0;right:0;bottom:0;z-index:8;gap:8px;padding:10px;background:linear-gradient(transparent,#000c);align-items:center}
+#fsBar button{flex:1;min-width:0;padding:10px 6px;min-height:48px;font-size:.9rem;background:#ffffff22}
+#stage.is-fs #fsBar{display:flex;transition:opacity .3s}
+#stage.is-fs.fs-hide-ui #fsBar{opacity:0;pointer-events:none}
+#stage.is-fs #player{position:absolute;inset:0;width:100%;height:100%;aspect-ratio:auto;border-radius:0}
+#stage.is-fs .videos{position:absolute;inset:0;display:block;margin:0;pointer-events:none;z-index:5}
+#stage.is-fs .vid{pointer-events:auto;position:absolute;box-shadow:0 4px 18px #000b;border:2px solid #fff}
+#stage.is-fs #remoteBox{width:28%;max-width:260px;min-width:120px;cursor:pointer}
+#stage.is-fs #remoteBox.pos-tr{top:12px;right:12px;left:auto;bottom:auto}
+#stage.is-fs #remoteBox.pos-tl{top:12px;left:12px;right:auto;bottom:auto}
+#stage.is-fs #remoteBox.pos-bl{bottom:76px;left:12px;right:auto;top:auto}
+#stage.is-fs #remoteBox.pos-br{bottom:76px;right:12px;left:auto;top:auto}
+#stage.is-fs #localBox{width:16%;max-width:140px;min-width:84px;bottom:76px;right:12px;top:auto;left:auto}
+#stage.is-fs #localBox.self-hidden{display:none!important}
+#stage.is-fs #syncNote,#stage.is-fs .stage-h2{display:none}
+#btnFsFloat{position:absolute;top:10px;left:10px;z-index:9;min-height:44px;padding:8px 12px;border-radius:99px;background:#000a;font-size:1rem}
+#btnHideSelf{display:none;position:absolute;top:4px;right:4px;z-index:2;min-height:28px;padding:2px 9px;border-radius:99px;background:#000a;font-size:.8rem}
+#stage.is-fs #btnHideSelf{display:block}
+#selfShowBtn{position:absolute;bottom:76px;right:12px;z-index:6;min-height:44px;padding:8px 12px;background:#000a}
 </style>
 </head>
 <body>
@@ -91,16 +115,26 @@ input.code{text-transform:uppercase;letter-spacing:.35em;font-weight:800;text-al
 <div class="row">
 <input id="ytInput" placeholder="Dán link YouTube hoặc mã video (ví dụ: dQw4w9WgXcQ)">
 <button class="primary" id="btnLoad">▶ Mở video</button>
+<button id="btnFs">⛶ Toàn màn hình</button>
 </div>
 <div id="ytError" class="err hidden"></div>
 <div style="height:10px"></div>
+<div id="stage">
 <div id="player"><div style="display:flex;align-items:center;justify-content:center;height:100%;opacity:.7;padding:20px;text-align:center">Chưa có video.<br>Dán link YouTube ở trên rồi bấm “Mở video”.</div></div>
 <div class="small" id="syncNote" style="margin-top:6px">Chưa đồng bộ — mở video rồi bấm phát, bên kia sẽ chạy theo.</div>
-
-<h2 style="margin-top:16px">Video của hai người</h2>
+<h2 class="stage-h2" style="margin-top:16px">Video của hai người</h2>
 <div class="videos">
-<div class="vid" id="remoteBox"><video id="remoteVideo" playsinline autoplay></video><span id="remoteLabel">Người kia — chưa vào</span></div>
-<div class="vid" id="localBox"><video id="localVideo" playsinline autoplay muted></video><span id="localLabel">Bạn</span></div>
+<div class="vid pos-tr" id="remoteBox" title="Bấm vào mặt người kia để đổi góc"><video id="remoteVideo" playsinline autoplay></video><span id="remoteLabel">Người kia — chưa vào</span></div>
+<div class="vid" id="localBox"><video id="localVideo" playsinline autoplay muted></video><span id="localLabel">Bạn</span><button id="btnHideSelf" title="Ẩn cam của bạn">✕</button></div>
+</div>
+<button id="btnFsFloat" title="Xem toàn màn hình">⛶</button>
+<div id="fsBar">
+<button id="btnFsPlay">⏯ Phát / Tạm dừng</button>
+<button id="btnFsMic">🎤 Mic</button>
+<button id="btnFsCam">📷 Camera</button>
+<button id="btnFsExit">⛶ Thoát</button>
+</div>
+<button id="selfShowBtn" class="hidden">📷 Hiện cam của bạn</button>
 </div>
 <div id="camError" class="err hidden"></div>
 <div class="row" style="margin-top:10px">
@@ -108,6 +142,7 @@ input.code{text-transform:uppercase;letter-spacing:.35em;font-weight:800;text-al
 <button id="btnCam">📷 Tắt camera</button>
 <button id="btnEnd" class="off">📞 Kết thúc</button>
 </div>
+<div class="small" style="margin-top:8px">⛶ Bấm “Toàn màn hình” thì video YouTube phóng to hết màn hình mà vẫn thấy mặt người kia ở góc — bấm vào mặt người kia để đổi góc. Khi xem toàn màn hình, khung nhắn tin tạm ẩn đi; thoát ra là nhắn lại được.</div>
 
 <h2 style="margin-top:16px">Nhắn tin trong phòng</h2>
 <div id="chatList"></div>
@@ -342,7 +377,7 @@ function createPlayer(videoId){
   try{
     ytPlayer = new YT.Player("player", {
       videoId: videoId,
-      playerVars: {playsinline: 1, rel: 0, modestbranding: 1},
+      playerVars: {playsinline: 1, rel: 0, modestbranding: 1, fs: 0},
       events: {
         onStateChange: onPlayerState,
         onError: onPlayerError
@@ -453,6 +488,128 @@ function applyRemote(fn){
   try{ fn(); }catch(e){}
   setTimeout(function(){ applyingRemote = false; }, 700);
 }
+</script>
+
+<script>
+"use strict";
+/* ============ Toàn màn hình: video + mặt người kia cùng lúc ============
+   Toàn màn hình áp dụng cho cả khung #stage (YouTube + 2 camera), KHÔNG
+   bao giờ áp dụng cho riêng iframe YouTube — vì iframe riêng sẽ giấu hết
+   các ô video phủ trên nó. iPhone Safari không có requestFullscreen cho
+   phần tử thường nên dùng "giả toàn màn hình" bằng CSS (position:fixed). */
+var stage = $("stage");
+var fsHideTimer = null;
+var remoteCorners = ["pos-tr", "pos-tl", "pos-bl", "pos-br"];
+var remoteCornerIdx = 0;
+function isFs(){
+  return !!(document.fullscreenElement || document.webkitFullscreenElement || stage.classList.contains("pseudo-fs"));
+}
+function enterPseudoFs(){
+  stage.classList.add("pseudo-fs");
+  document.body.style.overflow = "hidden";
+  syncFsUI();
+}
+function enterFs(){
+  if(isFs()) return;
+  try{
+    if(stage.requestFullscreen){
+      var p = stage.requestFullscreen();
+      if(p && p.catch){ p.then(function(){ syncFsUI(); }, function(){ enterPseudoFs(); }); }
+      else { syncFsUI(); }
+    } else if(stage.webkitRequestFullscreen){
+      stage.webkitRequestFullscreen();
+      syncFsUI();
+    } else {
+      enterPseudoFs();
+    }
+  }catch(e){ enterPseudoFs(); }
+}
+function exitFs(){
+  if(document.fullscreenElement && document.exitFullscreen){ try{ document.exitFullscreen(); }catch(e){} }
+  else if(document.webkitFullscreenElement && document.webkitExitFullscreen){ try{ document.webkitExitFullscreen(); }catch(e){} }
+  if(stage.classList.contains("pseudo-fs")){
+    stage.classList.remove("pseudo-fs");
+    document.body.style.overflow = "";
+  }
+  syncFsUI();
+}
+function toggleFs(){ if(isFs()){ exitFs(); } else { enterFs(); } }
+function resizePlayer(){
+  if(!ytPlayer) return;
+  try{
+    if(isFs()){ ytPlayer.setSize(stage.clientWidth, stage.clientHeight); }
+    else { var pl = $("player"); ytPlayer.setSize(pl.clientWidth, pl.clientHeight); }
+  }catch(e){}
+}
+function armFsHideTimer(){
+  clearTimeout(fsHideTimer);
+  stage.classList.remove("fs-hide-ui");
+  if(!isFs()) return;
+  fsHideTimer = setTimeout(function(){ stage.classList.add("fs-hide-ui"); }, 3000);
+}
+function syncFsUI(){
+  var on = isFs();
+  stage.classList.toggle("is-fs", on);
+  if(!on){
+    document.body.style.overflow = "";
+    stage.classList.remove("fs-hide-ui");
+    clearTimeout(fsHideTimer);
+  }
+  var b = $("btnFs");
+  if(b) b.textContent = on ? "⛶ Thoát toàn màn hình" : "⛶ Toàn màn hình";
+  if(on){ armFsHideTimer(); setTimeout(resizePlayer, 250); }
+  else { setTimeout(resizePlayer, 150); }
+}
+document.addEventListener("fullscreenchange", syncFsUI);
+document.addEventListener("webkitfullscreenchange", syncFsUI);
+document.addEventListener("keydown", function(e){
+  if(e.key === "Escape" && stage.classList.contains("pseudo-fs")){ exitFs(); }
+});
+$("btnFs").addEventListener("click", toggleFs);
+$("btnFsFloat").addEventListener("click", function(e){ e.stopPropagation(); toggleFs(); });
+$("btnFsExit").addEventListener("click", function(e){ e.stopPropagation(); exitFs(); });
+$("btnFsPlay").addEventListener("click", function(e){
+  e.stopPropagation();
+  if(!ytPlayer) return;
+  try{
+    var st = ytPlayer.getPlayerState();
+    if(st === YT.PlayerState.PLAYING){ ytPlayer.pauseVideo(); } else { ytPlayer.playVideo(); }
+  }catch(err){}
+  armFsHideTimer();
+});
+$("btnFsMic").addEventListener("click", function(e){ e.stopPropagation(); $("btnMic").click(); armFsHideTimer(); });
+$("btnFsCam").addEventListener("click", function(e){ e.stopPropagation(); $("btnCam").click(); armFsHideTimer(); });
+$("remoteBox").addEventListener("click", function(e){
+  e.stopPropagation();
+  if(!isFs()) return;
+  remoteCornerIdx = (remoteCornerIdx + 1) % remoteCorners.length;
+  var box = $("remoteBox");
+  remoteCorners.forEach(function(c){ box.classList.remove(c); });
+  box.classList.add(remoteCorners[remoteCornerIdx]);
+  armFsHideTimer();
+});
+$("localBox").addEventListener("click", function(e){
+  if(e.target && e.target.id === "btnHideSelf") return;
+  if(isFs()) armFsHideTimer();
+});
+$("btnHideSelf").addEventListener("click", function(e){
+  e.stopPropagation();
+  $("localBox").classList.add("self-hidden");
+  $("selfShowBtn").classList.remove("hidden");
+});
+$("selfShowBtn").addEventListener("click", function(e){
+  e.stopPropagation();
+  $("localBox").classList.remove("self-hidden");
+  $("selfShowBtn").classList.add("hidden");
+  armFsHideTimer();
+});
+stage.addEventListener("click", function(e){
+  if(!isFs()) return;
+  if(e.target.closest("#fsBar") || e.target.closest(".vid") || e.target.closest("button")) return;
+  stage.classList.toggle("fs-hide-ui");
+  if(!stage.classList.contains("fs-hide-ui")) armFsHideTimer();
+});
+stage.addEventListener("pointermove", function(){ if(isFs()) armFsHideTimer(); });
 </script>
 </body>
 </html>
