@@ -48,7 +48,7 @@ input.code{text-transform:uppercase;letter-spacing:.35em;font-weight:800;text-al
 #stage:fullscreen{background:#000}
 #stage.pseudo-fs{position:fixed;inset:0;width:100vw;height:100vh;max-width:none;z-index:9999;background:#000;margin:0;padding:0}
 #fsBar{display:none;position:absolute;left:0;right:0;bottom:0;z-index:8;gap:8px;padding:10px;background:linear-gradient(transparent,#000c);align-items:center}
-#fsBar button{flex:1;min-width:0;padding:10px 6px;min-height:48px;font-size:.9rem;background:#ffffff22}
+#fsBar button{flex:1;min-width:0;padding:10px 4px;min-height:48px;font-size:.85rem;background:#ffffff22}
 #stage.is-fs #fsBar{display:flex;transition:opacity .3s}
 #stage.is-fs.fs-hide-ui #fsBar{opacity:0;pointer-events:none}
 #stage.is-fs #player{position:absolute;inset:0;width:100%;height:100%;aspect-ratio:auto;border-radius:0}
@@ -66,6 +66,31 @@ input.code{text-transform:uppercase;letter-spacing:.35em;font-weight:800;text-al
 #btnHideSelf{display:none;position:absolute;top:4px;right:4px;z-index:2;min-height:28px;padding:2px 9px;border-radius:99px;background:#000a;font-size:.8rem}
 #stage.is-fs #btnHideSelf{display:block}
 #selfShowBtn{position:absolute;bottom:76px;right:12px;z-index:6;min-height:44px;padding:8px 12px;background:#000a}
+
+/* ===== Dọc (portrait) và ngang (landscape) trong toàn màn hình ===== */
+/* Tôn trọng tai thỏ / viền an toàn của iPhone: ô mặt và thanh nút không chui dưới tai thỏ */
+#stage:fullscreen,#stage.pseudo-fs{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+#stage.is-fs #remoteBox.pos-tr{top:max(12px,env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right))}
+#stage.is-fs #remoteBox.pos-tl{top:max(12px,env(safe-area-inset-top));left:max(12px,env(safe-area-inset-left))}
+#stage.is-fs #remoteBox.pos-bl{bottom:max(76px,calc(env(safe-area-inset-bottom) + 64px));left:max(12px,env(safe-area-inset-left))}
+#stage.is-fs #remoteBox.pos-br{bottom:max(76px,calc(env(safe-area-inset-bottom) + 64px));right:max(12px,env(safe-area-inset-right))}
+#stage.is-fs #localBox{bottom:max(76px,calc(env(safe-area-inset-bottom) + 64px));right:max(12px,env(safe-area-inset-right))}
+#stage.is-fs #localBox.pos-bl{left:max(12px,env(safe-area-inset-left));right:auto}
+#stage.is-fs #btnFsFloat{top:max(10px,env(safe-area-inset-top));left:max(10px,env(safe-area-inset-left))}
+#stage.is-fs #fsBar{padding-bottom:max(10px,env(safe-area-inset-bottom))}
+/* Ngang: màn hình thấp nên ô mặt tính theo CHIỀU CAO (vh), không theo chiều rộng — nếu tính theo rộng thì ô mặt cao gần nửa màn hình */
+@media (orientation:landscape){
+  #stage.is-fs #remoteBox{width:min(24vw,36vh);min-width:110px}
+  #stage.is-fs #localBox{width:min(14vw,22vh);min-width:76px}
+}
+/* Dọc: ô mặt tính theo chiều rộng như cũ (28% / 16%) — không đổi */
+/* Chưa toàn màn hình mà xoay ngang: thu hẹp video 16:9 cho vừa chiều cao màn hình, khỏi phải cuộn nhiều */
+@media (orientation:landscape) and (max-height:500px){
+  #player{width:min(100%,calc((100vh - 170px)*16/9));margin:0 auto}
+}
+/* Ẩn cả hai ô mặt trong toàn màn hình (nút "Ẩn mặt" ở thanh dưới) */
+#stage.is-fs.faces-hidden .vid{display:none!important}
+#stage.is-fs.faces-hidden #selfShowBtn{display:none!important}
 </style>
 </head>
 <body>
@@ -130,6 +155,8 @@ input.code{text-transform:uppercase;letter-spacing:.35em;font-weight:800;text-al
 <button id="btnFsFloat" title="Xem toàn màn hình">⛶</button>
 <div id="fsBar">
 <button id="btnFsPlay">⏯ Phát / Tạm dừng</button>
+<button id="btnFsCorner">🔀 Đổi góc</button>
+<button id="btnFsFaces">🙈 Ẩn mặt</button>
 <button id="btnFsMic">🎤 Mic</button>
 <button id="btnFsCam">📷 Camera</button>
 <button id="btnFsExit">⛶ Thoát</button>
@@ -142,7 +169,7 @@ input.code{text-transform:uppercase;letter-spacing:.35em;font-weight:800;text-al
 <button id="btnCam">📷 Tắt camera</button>
 <button id="btnEnd" class="off">📞 Kết thúc</button>
 </div>
-<div class="small" style="margin-top:8px">⛶ Bấm “Toàn màn hình” thì video YouTube phóng to hết màn hình mà vẫn thấy mặt người kia ở góc — bấm vào mặt người kia để đổi góc. Khi xem toàn màn hình, khung nhắn tin tạm ẩn đi; thoát ra là nhắn lại được.</div>
+<div class="small" style="margin-top:8px">⛶ Bấm “Toàn màn hình” của trang này thì video YouTube phóng to hết màn hình mà vẫn thấy mặt người kia ở góc — bấm vào mặt người kia hoặc nút “Đổi góc” để đổi góc, nút “Ẩn mặt” để ẩn cả hai ô mặt. Đừng bấm nút toàn màn hình của riêng YouTube, vì nút đó sẽ giấu mất mặt người kia. Xoay điện thoại dọc hay ngang đều coi được — xoay ngang thì video to hơn, mặt người kia vẫn ở góc. Khi xem toàn màn hình, khung nhắn tin tạm ẩn đi; thoát ra là nhắn lại được.</div>
 
 <h2 style="margin-top:16px">Nhắn tin trong phòng</h2>
 <div id="chatList"></div>
@@ -553,13 +580,30 @@ function syncFsUI(){
   if(!on){
     document.body.style.overflow = "";
     stage.classList.remove("fs-hide-ui");
+    stage.classList.remove("faces-hidden");
     clearTimeout(fsHideTimer);
+    var fb = $("btnFsFaces");
+    if(fb) fb.textContent = "🙈 Ẩn mặt";
   }
   var b = $("btnFs");
   if(b) b.textContent = on ? "⛶ Thoát toàn màn hình" : "⛶ Toàn màn hình";
+  var ff = $("btnFsFloat");
+  if(ff) ff.textContent = on ? "✕ Thoát" : "⛶";
   if(on){ armFsHideTimer(); setTimeout(resizePlayer, 250); }
   else { setTimeout(resizePlayer, 150); }
 }
+/* Xoay điện thoại dọc/ngang (hoặc đổi cỡ cửa sổ): chỉ căn lại cỡ video,
+   KHÔNG tải lại video, KHÔNG ngắt cuộc gọi. iOS báo xoay xong muộn hơn
+   bố cục thật nên gọi resizePlayer hai lần, cách nhau một chút. */
+var rsTimer = null;
+function onViewportChange(){
+  clearTimeout(rsTimer);
+  rsTimer = setTimeout(resizePlayer, 120);
+  setTimeout(resizePlayer, 500);
+}
+window.addEventListener("resize", onViewportChange);
+window.addEventListener("orientationchange", onViewportChange);
+if(window.visualViewport){ window.visualViewport.addEventListener("resize", onViewportChange); }
 document.addEventListener("fullscreenchange", syncFsUI);
 document.addEventListener("webkitfullscreenchange", syncFsUI);
 document.addEventListener("keydown", function(e){
@@ -579,13 +623,32 @@ $("btnFsPlay").addEventListener("click", function(e){
 });
 $("btnFsMic").addEventListener("click", function(e){ e.stopPropagation(); $("btnMic").click(); armFsHideTimer(); });
 $("btnFsCam").addEventListener("click", function(e){ e.stopPropagation(); $("btnCam").click(); armFsHideTimer(); });
-$("remoteBox").addEventListener("click", function(e){
-  e.stopPropagation();
+/* Đổi góc ô mặt người kia. Nếu ô người kia xuống góc dưới-phải thì ô của
+   mình tự dạt sang góc dưới-trái, để hai ô không chồng lên nhau. */
+function cycleRemoteCorner(){
   if(!isFs()) return;
   remoteCornerIdx = (remoteCornerIdx + 1) % remoteCorners.length;
   var box = $("remoteBox");
   remoteCorners.forEach(function(c){ box.classList.remove(c); });
-  box.classList.add(remoteCorners[remoteCornerIdx]);
+  var corner = remoteCorners[remoteCornerIdx];
+  box.classList.add(corner);
+  var local = $("localBox");
+  if(corner === "pos-br"){ local.classList.add("pos-bl"); }
+  else { local.classList.remove("pos-bl"); }
+  armFsHideTimer();
+}
+$("remoteBox").addEventListener("click", function(e){
+  e.stopPropagation();
+  cycleRemoteCorner();
+});
+$("btnFsCorner").addEventListener("click", function(e){
+  e.stopPropagation();
+  cycleRemoteCorner();
+});
+$("btnFsFaces").addEventListener("click", function(e){
+  e.stopPropagation();
+  var hidden = stage.classList.toggle("faces-hidden");
+  $("btnFsFaces").textContent = hidden ? "👀 Hiện mặt" : "🙈 Ẩn mặt";
   armFsHideTimer();
 });
 $("localBox").addEventListener("click", function(e){
